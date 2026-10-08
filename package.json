@@ -1,0 +1,13 @@
+{
+“name”: “uni-ease”,
+“version”: “1.0.0”,
+“private”: true,
+“description”: “Uni Ease student services platform”,
+“main”: “server.js”,
+“scripts”: {
+“start”: “node server.js”
+},
+“engines”: {
+“node”: “22.x”
+}
+}
