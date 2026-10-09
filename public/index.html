@@ -205,7 +205,7 @@ async function viewOrder(id){
  <p>${esc(o.description)}</p><p>Destination: ${esc(o.delivery)}</p>
  <p>Assistant: ${esc(o.worker_name||'Waiting for assignment')}</p>
  <h3>Progress</h3>${d.events.map(e=>`<p>${esc(e.status)} — ${esc(e.note||'')}</p>`).join('')}
- ${o.status!=='completed'&&o.status!=='cancelled'?`<button class="btn" onclick="complaint(${o.id})">Report a problem</button>`:''}
+ ${true?`<button class="btn" onclick="complaint(${o.id})">Report a problem</button>`:''}
  <button class="btn secondary" onclick="dashboard()">Back</button></div>`;
 }
 
