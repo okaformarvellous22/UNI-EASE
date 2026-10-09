@@ -279,8 +279,17 @@ async function admin(m){
 }
 
 async function dashboard(){await render()}
-window.viewOrder=viewOrder;
-window.complaint=complaint;
+async function resolveComplaint(id){
+ if(!confirm('Mark this complaint as resolved?'))return;
+ try{
+  await api(`/api/complaints/${id}/resolve`,{method:'POST'});
+  toast('Complaint resolved');
+  await render();
+ }catch(e){toast(e.message)}
+}
+ window.viewOrder=viewOrder;
+window.resolveComplaint=resolveComplaint;
+ window.complaint=complaint;
 window.rateOrder=rateOrder;
 window.acceptOrder=acceptOrder;
 window.setStatus=setStatus;
