@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b5d3b">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Uni Ease</title>
+<style>
+:root{--g:#0b5d3b;--ink:#10231a;--muted:#6b756f;--bg:#f5f7f5;--card:#fff;--line:#e2e8e4}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.top{background:#0b5d3b;color:white;padding:22px 18px}
+.topin{max-width:1050px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:15px}
+.brand{font-weight:900;font-size:22px}
+.brand span{color:#b9e9cf}
+.wrap{max-width:1050px;margin:auto;padding:22px 16px 60px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card,.authbox{background:white;border:1px solid var(--line);border-radius:18px;padding:18px}
+.hero{background:#e9f7ef;border:1px solid #cfe8d9;border-radius:22px;padding:25px;margin-bottom:18px}
+h1,h2,h3{margin:0 0 9px}
+h1{font-size:28px}
+.muted{color:var(--muted);font-size:14px}
+.btn{border:0;border-radius:10px;padding:11px 15px;background:var(--g);color:white;font-weight:bold}
+.btn.secondary{background:#e7f2eb;color:var(--g)}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:white}
+label{font-size:13px;font-weight:bold;display:block;margin:11px 0 6px}
+.spacer{height:12px}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.between{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#edf3ef;font-size:12px}
+.order{border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:10px}
+.auth{min-height:100vh;display:grid;place-items:center;padding:20px}
+.authbox{width:min(440px,100%)}
+.tabs{display:flex;gap:7px;margin-bottom:15px}
+.tab{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:white}
+.tab.active{background:#e8f5ed;color:var(--g)}
+.toast{position:fixed;bottom:18px;left:10%;width:80%;background:#12251b;color:white;padding:12px;border-radius:10px}
+@media(max-width:760px){.grid,.grid2{grid-template-columns:1fr}.topin{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast hidden"></div>
+<script>
+const app=document.getElementById('app');
+let state={token:localStorage.getItem('ca_token'),user:null};
+
+const api=async(path,opt={})=>{
+ const r=await fetch(path,{...opt,headers:{'Content-Type':'application/json',...(state.token?{Authorization:'Bearer '+state.token}:{})}});
+ const d=await r.json().catch(()=>({error:'Invalid server response'}));
+ if(!r.ok)throw new Error(d.error||'Request failed');
+ return d;
+};
+
+function toast(s){
+ const t=document.getElementById('toast');
+ t.textContent=s;
+ t.classList.remove('hidden');
+ setTimeout(()=>t.classList.add('hidden'),3000);
+}
+function money(n){return '₦'+Number(n||0).toLocaleString()}
+function esc(s){
+ return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+function status(s){return `<span class="badge">${esc(s.replace('_',' '))}</span>`}
+
+async function boot(){
+ if(state.token){
+  try{state.user=(await api('/api/me')).user;await render()}
+  catch{localStorage.removeItem('ca_token');state.token=null;renderAuth()}
+ }else renderAuth();
+}
+
+function renderAuth(){
+ app.innerHTML=`<div class="auth"><div class="authbox">
+ <div class="brand" style="color:#0b5d3b">UNI <span>EASE</span></div>
+ <h1>Student life, simplified.</h1>
+ <p class="muted">Place an errand. We get it done.</p>
+ <div class="tabs">
+ <button class="tab active" id="loginTab">Login</button>
+ <button class="tab" id="signupTab">Create account</button>
+ </div>
+ <form id="authForm"></form>
+ <p class="muted">Demo customer: customer@campusassist.local / customer123</p>
+ <p class="muted">Demo worker: worker@campusassist.local / worker123</p>
+ <p class="muted">Demo admin: admin@campusassist.local / admin123</p>
+ </div></div>`;
+
+ let mode='login';
+ const form=document.getElementById('authForm');
+
+ function draw(){
+  form.innerHTML=mode==='login'?`
+   <label>Email</label><input name="email" type="email" required>
+   <label>Password</label><input name="password" type="password" required>
+   <div class="spacer"></div><button class="btn" style="width:100%">Log in</button>`
+   :`
+   <label>Name</label><input name="name" required>
+   <label>Phone</label><input name="phone">
+   <label>Email</label><input name="email" type="email" required>
+   <label>Password</label><input name="password" type="password" minlength="6" required>
+   <div class="spacer"></div><button class="btn" style="width:100%">Create account</button>`;
+ }
+
+ draw();
+
+ document.getElementById('loginTab').onclick=()=>{
+  mode='login';document.getElementById('loginTab').classList.add('active');
+  document.getElementById('signupTab').classList.remove('active');draw();
+ };
+ document.getElementById('signupTab').onclick=()=>{
+  mode='signup';document.getElementById('signupTab').classList.add('active');
+  document.getElementById('loginTab').classList.remove('active');draw();
+ };
+
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  try{
+   const b=Object.fromEntries(new FormData(form).entries());
+   const d=await api(mode==='login'?'/api/login':'/api/signup',{method:'POST',body:JSON.stringify(b)});
+   state.token=d.token;state.user=d.user;
+   localStorage.setItem('ca_token',state.token);
+   await render();
+  }catch(e){toast(e.message)}
+ };
+}
+
+async function render(){
+ app.innerHTML=`<header class="top"><div class="topin">
+ <div class="brand">UNI <span>EASE</span></div>
+ <div>${esc(state.user.name)} · ${esc(state.user.role)}
+ <button class="btn secondary" id="logout">Logout</button></div>
+ </div></header><main class="wrap" id="main"></main>`;
+
+ document.getElementById('logout').onclick=async()=>{
+  try{await api('/api/logout',{method:'POST'})}catch{}
+  localStorage.removeItem('ca_token');state.token=null;state.user=null;renderAuth();
+ };
+
+ const m=document.getElementById('main');
+ if(state.user.role==='customer')await customer(m);
+ else if(state.user.role==='worker')await worker(m);
+ else await admin(m);
+}
+
+async function customer(m){
+ const d=await api('/api/orders');
+ m.innerHTML=`<section class="hero">
+ <h1>Your time. Your focus. We've got the rest.</h1>
+ <p class="muted">Request a campus errand and track it from your phone.</p>
+ <button class="btn" id="newOrder">+ Request an errand</button>
+ </section><div class="grid2">
+ <div class="card"><h2>My orders</h2>
+ <div>${d.orders.length?d.orders.map(o=>`
+ <div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
+ ${status(o.status)}<p>${esc(o.description)}</p>
+ <p>${esc(o.delivery)} · <strong>${money(o.price)}</strong></p>
+ <button class="btn secondary" onclick="viewOrder(${o.id})">Track order</button>
+ ${o.status==='completed'?`<button class="btn secondary" onclick="rateOrder(${o.id})">Rate</button>`:''}
+ </div>`).join(''):'<p class="muted">No orders yet.</p>'}</div>
+ </div><div class="card"><h2>How it works</h2>
+ <p>1. Tell us what you need.</p><p>2. We assign an assistant.</p>
+ <p>3. Follow the status.</p><p>4. Get it done.</p></div></div>`;
+
+ document.getElementById('newOrder').onclick=()=>newOrder(m);
+}
+
+async function newOrder(m){
+ const s=await api('/api/services');
+ m.innerHTML=`<div class="card"><h2>Request an errand</h2>
+ <button class="btn secondary" onclick="dashboard()">Back</button>
+ <form id="orderForm">
+ <label>Service</label><select id="service">${s.services.map(x=>`<option value="${esc(x.name)}" data-base="${x.base}">${esc(x.name)} — from ${money(x.base)}</option>`).join('')}</select>
+ <label>What do you need?</label><textarea id="description" rows="4" required></textarea>
+ <label>Pickup location</label><input id="pickup">
+ <label>Delivery / destination</label><input id="delivery" required>
+ <label>Price (₦)</label><input id="price" type="number" min="1500" value="1500" required>
+ <div class="spacer"></div><button class="btn">Place order</button>
+ </form></div>`;
+
+ document.getElementById('service').onchange=e=>{
+  document.getElementById('price').value=e.target.selectedOptions[0].dataset.base;
+ };
+ document.getElementById('orderForm').onsubmit=async e=>{
+  e.preventDefault();
+  try{
+   await api('/api/orders',{method:'POST',body:JSON.stringify({
+    service:service.value,description:description.value,pickup:pickup.value,
+    delivery:delivery.value,price:Number(price.value)
+   })});
+   toast('Order placed successfully');await dashboard();
+  }catch(x){toast(x.message)}
+ };
+}
+
+async function viewOrder(id){
+ const d=await api('/api/orders/'+id);const o=d.order;
+ document.getElementById('main').innerHTML=`<div class="card">
+ <h2>Order #${o.id}</h2><p>${esc(o.service)} · ${status(o.status)}</p>
+ <p>${esc(o.description)}</p><p>Destination: ${esc(o.delivery)}</p>
+ <p>Assistant: ${esc(o.worker_name||'Waiting for assignment')}</p>
+ <h3>Progress</h3>${d.events.map(e=>`<p>${esc(e.status)} — ${esc(e.note||'')}</p>`).join('')}
+ ${o.status!=='completed'&&o.status!=='cancelled'?`<button class="btn" onclick="complaint(${o.id})">Report a problem</button>`:''}
+ <button class="btn secondary" onclick="dashboard()">Back</button></div>`;
+}
+
+async function complaint(id){
+ const message=prompt('Tell Uni Ease what went wrong:');
+ if(!message)return;
+ try{
+  await api('/api/complaints',{method:'POST',body:JSON.stringify({orderId:id,message})});
+  toast('Complaint submitted');await viewOrder(id);
+ }catch(e){toast(e.message)}
+}
+
+async function rateOrder(id){
+ const rating=prompt('Rating from 1 to 5:','5');
+ if(!rating)return;
+ const comment=prompt('Optional comment:','');
+ try{
+  await api('/api/ratings',{method:'POST',body:JSON.stringify({orderId:id,rating:Number(rating),comment})});
+  toast('Thanks for your feedback');await dashboard();
+ }catch(e){toast(e.message)}
+}
+
+async function worker(m){
+ const d=await api('/api/orders');
+ const available=d.orders.filter(o=>o.status==='pending'&&!o.worker_id);
+ const mine=d.orders.filter(o=>o.worker_id===state.user.id);
+
+ m.innerHTML=`<section class="hero"><h1>Worker dashboard</h1>
+ <p>Accept jobs, update customers, and build a reliable service record.</p></section>
+ <div class="grid2"><div class="card"><h2>Available orders</h2>
+ ${available.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
+ <p>${esc(o.description)}</p><p>${esc(o.delivery)} · ${money(o.price)}</p>
+ <button class="btn" onclick="acceptOrder(${o.id})">Accept job</button></div>`).join('')||'<p>No new jobs.</p>'}
+ </div><div class="card"><h2>My orders</h2>
+ ${mine.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
+ ${status(o.status)}<p>${esc(o.description)}</p>
+ ${o.status==='accepted'?`<button class="btn" onclick="setStatus(${o.id},'in_progress')">Start job</button>`:''}
+ ${o.status==='in_progress'?`<button class="btn" onclick="setStatus(${o.id},'completed')">Mark completed</button>`:''}
+ </div>`).join('')||'<p>No assigned orders.</p>'}
+ </div></div>`;
+}
+
+async function acceptOrder(id){
+ try{await api('/api/orders/'+id+'/accept',{method:'POST'});toast('Job accepted');await dashboard()}
+ catch(e){toast(e.message)}
+}
+async function setStatus(id,s){
+ try{await api('/api/orders/'+id+'/status',{method:'POST',body:JSON.stringify({status:s})});toast('Order updated');await dashboard()}
+ catch(e){toast(e.message)}
+}
+
+async function admin(m){
+ const [orders,workers,stats,complaints]=await Promise.all([
+  api('/api/orders'),api('/api/workers'),api('/api/stats'),api('/api/complaints')
+ ]);
+
+ m.innerHTML=`<section class="hero"><h1>Admin control center</h1>
+ <p>Monitor orders, assign assistants, and protect service quality.</p></section>
+ <div class="grid"><div class="card">Orders<h1>${stats.total}</h1></div>
+ <div class="card">Active jobs<h1>${stats.pending}</h1></div>
+ <div class="card">Completed value<h1>${money(stats.revenue)}</h1></div></div>
+ <div class="grid2"><div class="card"><h2>Orders</h2>
+ ${orders.orders.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
+ ${status(o.status)}<p>${esc(o.customer_name)} · ${esc(o.delivery)}</p>
+ <p>${esc(o.description)}</p></div>`).join('')||'<p>No orders.</p>'}
+ </div><div class="card"><h2>Workers</h2>
+ ${workers.workers.map(w=>`<div class="order"><strong>${esc(w.name)}</strong><p>${esc(w.email)}</p></div>`).join('')}
+ <h2>Open complaints</h2>
+ ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`<div class="order"><strong>Order #${c.order_id}</strong><p>${esc(c.message)}</p></div>`).join('')||'<p>No open complaints.</p>'}
+ </div></div>`;
+}
+
+async function dashboard(){await render()}
+window.viewOrder=viewOrder;
+window.complaint=complaint;
+window.rateOrder=rateOrder;
+window.acceptOrder=acceptOrder;
+window.setStatus=setStatus;
+window.dashboard=dashboard;
+
+boot();
+</script>
+</body>
+</html>
