@@ -274,7 +274,7 @@ async function admin(m){
  </div><div class="card"><h2>Workers</h2>
  ${workers.workers.map(w=>`<div class="order"><strong>${esc(w.name)}</strong><p>${esc(w.email)}</p></div>`).join('')}
  <h2>Open complaints</h2>
- ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`<div class="order"><strong>Order #${c.order_id}</strong><p>${esc(c.message)}</p></div>`).join('')||'<p>No open complaints.</p>'}
+ ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`<div class="order"><strong>Order #${c.order_id}</strong><p>${esc(c.message)}</p><button class="btn" onclick="resolveComplaint(${c.id})">Resolve</button></div>`).join('')||'<p>No open complaints.</p>'}
  </div></div>`;
 }
 
