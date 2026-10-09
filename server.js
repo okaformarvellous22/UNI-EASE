@@ -181,7 +181,7 @@ async function api(req,res) {
       return send(res,200,{orders:rows});
     }
 
-    const orderMatch=p.match(/^\/api\/orders\/(\d+)$/);
+    const orderMatch=p.match(/^\/api\/orders\/(\d+)(?:\/(accept|status))?$/);
     if (orderMatch && req.method === 'GET') {
       const id=Number(orderMatch[1]);
       const o=db.prepare(`SELECT o.*, c.name customer_name,c.phone customer_phone,w.name worker_name
