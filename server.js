@@ -152,7 +152,13 @@ async function api(req,res) {
         {name:'General Campus Errand',base:1500}
       ]});
     }
-
+if (req.method === 'POST' && /^\/api\/complaints\/\d+\/resolve$/.test(p)) {
+  if (user.role !== 'admin') return send(res,403,{error:'Admins only.'});
+  const complaintId = Number(p.match(/^\/api\/complaints\/(\d+)\/resolve$/)[1]);
+  const result = db.prepare("UPDATE complaints SET status='resolved' WHERE id=?").run(complaintId);
+  if (!result.changes) return send(res,404,{error:'Complaint not found.'});
+  return send(res,200,{message:'Complaint marked as resolved.'});
+}
     if (req.method === 'POST' && p === '/api/orders') {
       if (!requireRole(user,['customer'])) return send(res,403,{error:'Only customers can create orders.'});
       const b=await body(req);
