@@ -177,8 +177,12 @@ async function newOrder(m){
  <form id="orderForm">
  <label>Service</label><select id="service">${s.services.map(x=>`<option value="${esc(x.name)}" data-base="${x.base}">${esc(x.name)} — from ${money(x.base)}</option>`).join('')}</select>
  <label>What do you need?</label><textarea id="description" rows="4" required></textarea>
- <label>Pickup location</label><input id="pickup">
- <label>Delivery / destination</label><input id="delivery" required>
+<label for="pickup">Pickup location</label>
+<input id="pickup" name="pickup" type="text" placeholder="Enter pickup address" required>
+
+<label for="delivery">Delivery / destination</label>
+<input id="delivery" name="delivery" type="text" placeholder="Enter delivery address" required> 
+ 
  <label>Price (₦)</label><input id="price" type="number" min="1500" value="1500" required>
  <div class="spacer"></div><button class="btn">Place order</button>
  </form></div>`;
