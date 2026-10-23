@@ -241,12 +241,13 @@ async function worker(m){
  m.innerHTML=`<section class="hero"><h1>Worker dashboard</h1>
  <p>Accept jobs, update customers, and build a reliable service record.</p></section>
  <div class="grid2"><div class="card"><h2>Available orders</h2>
- ${available.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
- <p>${esc(o.description)}</p><p>${esc(o.delivery)} · ${money(o.price)}</p>
- <button class="btn" onclick="acceptOrder(${o.id})">Accept job</button></div>`).join('')||'<p>No new jobs.</p>'}
+ ${available.map(o=><div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>  <p>${esc(o.description)}</p>  <p>📍 Pickup location: ${esc(o.pickup||'Not provided')}</p>  <p>🏁 Delivery location: ${esc(o.delivery||'Not provided')}</p>  <p>Price: ${money(o.price)}</p>  <button class="btn" onclick="acceptOrder(${o.id})">Accept job</button></div>).join('')||'<p>No new jobs.</p>'}
  </div><div class="card"><h2>My orders</h2>
  ${mine.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
- ${status(o.status)}<p>${esc(o.description)}</p>
+ ${status(o.status)}
+ <p>${esc(o.description)}</p>
+ <p>📍 Pickup location: ${esc(o.pickup||'Not provided')}</p>
+ <p>🏁 Delivery location: ${esc(o.delivery||'Not provided')}</p>
  ${o.status==='accepted'?`<button class="btn" onclick="setStatus(${o.id},'in_progress')">Start job</button>`:''}
  ${o.status==='in_progress'?`<button class="btn" onclick="setStatus(${o.id},'completed')">Mark completed</button>`:''}
  </div>`).join('')||'<p>No assigned orders.</p>'}
