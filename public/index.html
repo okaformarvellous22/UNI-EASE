@@ -206,7 +206,8 @@ async function viewOrder(id){
  const d=await api('/api/orders/'+id);const o=d.order;
  document.getElementById('main').innerHTML=`<div class="card">
  <h2>Order #${o.id}</h2><p>${esc(o.service)} · ${status(o.status)}</p>
- <p>${esc(o.description)}</p><p>Destination: ${esc(o.delivery)}</p>
+ <p>${esc(o.description)}</p><p>Pickup location: ${esc(o.pickup || 'Not provided')}</p>
+<p>Delivery location: ${esc(o.delivery)}</p>
  <p>Assistant: ${esc(o.worker_name||'Waiting for assignment')}</p>
  <h3>Progress</h3>${d.events.map(e=>`<p>${esc(e.status)} — ${esc(e.note||'')}</p>`).join('')}
  ${true?`<button class="btn" onclick="complaint(${o.id})">Report a problem</button>`:''}
