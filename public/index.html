@@ -441,7 +441,7 @@ async function render(){
  document.getElementById('changePassword').onclick=()=>showChangePassword();
  document.getElementById('logout').onclick=async()=>{
   try{await api('/api/logout',{method:'POST'})}catch{}
-  localStorage.removeItem('ca_token');state.token=null;state.user=null;renderAuth();
+  localStorage.removeItem('ca_token');state.token=null;state.user=null;renderLanding();
  };
 
  const m=document.getElementById('main');
