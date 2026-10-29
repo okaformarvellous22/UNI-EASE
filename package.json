@@ -1,13 +1,9 @@
 {
   "name": "uni-ease",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Uni Ease student services MVP",
+  "description": "Uni Ease student services platform using Supabase for persistent application data",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": "22.x"
-  }
+  "scripts": { "start": "node server.js", "check": "node --check server.js" },
+  "engines": { "node": "22.x" }
 }
