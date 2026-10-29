@@ -36,6 +36,8 @@ function verifyPassword(password, stored) {
 }
 function token() { return crypto.randomBytes(32).toString('hex'); }
 function supabaseConfig() {
+  console.log("SUPABASE_URL exists:", Boolean(process.env.SUPABASE_URL));
+console.log("SUPABASE_SERVICE_ROLE_KEY exists:", Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY));
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key) throw new Error('Supabase is not configured. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render.');
