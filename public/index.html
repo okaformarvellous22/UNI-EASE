@@ -253,8 +253,8 @@ function status(s){return `<span class="badge">${esc(s.replace('_',' '))}</span>
 async function boot(){
  if(state.token){
   try{state.user=(await api('/api/me')).user;await render()}
-  catch{localStorage.removeItem('ca_token');state.token=null;renderAuth()}
- }else renderAuth();
+  catch{localStorage.removeItem('ca_token');state.token=null;renderLanding()}
+ }else renderLanding();
 }
 function renderLanding(){
  app.innerHTML=`
