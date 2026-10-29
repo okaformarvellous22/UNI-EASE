@@ -7,40 +7,180 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <title>Uni Ease</title>
 <style>
-:root{--g:#D63384;--ink:#3D2433;--muted:#8A7481;--bg:#FFF5FA;--card:#fff;--line:#F2D6E4}
+:root{
+  --g:#D63384;
+  --ink:#35212D;
+  --muted:#887582;
+  --bg:#FFF6FA;
+  --card:#FFFFFF;
+  --line:#F0DCE7;
+  --rose:#FFE4F0;
+  --deep:#A91E64;
+  --shadow:0 8px 28px rgba(105,32,72,.07);
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+body{
+  margin:0;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.55;
+}
 button,input,select,textarea{font:inherit}
-button{cursor:pointer}
+button{cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s}
+button:hover{filter:brightness(.97)}
+button:active{transform:scale(.98)}
 .hidden{display:none!important}
-top{background:#D63384;color:white;padding:22px 18px}
-.topin{max-width:1050px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:15px}
-.brand{font-weight:900;font-size:22px}
-.brand span{color:#FFE0EF}
-.wrap{max-width:1050px;margin:auto;padding:22px 16px 60px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.card,.authbox{background:white;border:1px solid var(--line);border-radius:18px;padding:18px}
-.hero{background:#e9f7ef;border:1px solid #cfe8d9;border-radius:22px;padding:25px;margin-bottom:18px}
-h1,h2,h3{margin:0 0 9px}
-h1{font-size:28px}
+top{
+  display:block;
+  background:linear-gradient(120deg,#C72576,#E64D9A);
+  color:white;
+  padding:22px 18px;
+  box-shadow:0 4px 18px rgba(174,32,102,.12);
+}
+.topin{
+  max-width:1200px;
+  margin:auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+}
+.brand{font-weight:900;font-size:24px;letter-spacing:-.7px}
+.brand span{color:#FFE1F0}
+.wrap{max-width:1200px;margin:auto;padding:30px 20px 70px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.card,.authbox{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:23px;
+  box-shadow:var(--shadow);
+}
+.card{min-width:0;transition:transform .2s,box-shadow .2s}
+.card:hover{box-shadow:0 12px 32px rgba(105,32,72,.1)}
+.hero{
+  background:linear-gradient(125deg,#FCE1EF,#FFF1F7 65%,#FFFFFF);
+  border:1px solid #F4C9DE;
+  border-radius:24px;
+  padding:32px;
+  margin-bottom:24px;
+  box-shadow:var(--shadow);
+}
+h1,h2,h3{margin:0 0 12px;line-height:1.25;letter-spacing:-.35px}
+h1{font-size:clamp(25px,4vw,36px);font-weight:800}
+h2{font-size:23px}
+h3{font-size:18px}
+p{line-height:1.65}
 .muted{color:var(--muted);font-size:14px}
-.btn{border:0;border-radius:10px;padding:11px 15px;background:var(--g);color:white;font-weight:bold}
-.btn.secondary{background:#e7f2eb;color:var(--g)}
-input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:white}
-label{font-size:13px;font-weight:bold;display:block;margin:11px 0 6px}
-.spacer{height:12px}
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-.between{display:flex;justify-content:space-between;gap:10px;align-items:center}
-.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#edf3ef;font-size:12px}
-.order{border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:10px}
-.auth{min-height:100vh;display:grid;place-items:center;padding:20px}
-.authbox{width:min(440px,100%)}
-.tabs{display:flex;gap:7px;margin-bottom:15px}
-.tab{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:white}
-.tab.active{background:#e8f5ed;color:var(--g)}
-.toast{position:fixed;bottom:18px;left:10%;width:80%;background:#12251b;color:white;padding:12px;border-radius:10px}
-@media(max-width:760px){.grid,.grid2{grid-template-columns:1fr}.topin{flex-wrap:wrap}}
+.btn{
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  border:0;
+  border-radius:12px;
+  padding:12px 18px;
+  background:linear-gradient(135deg,#D63384,#B92370);
+  color:white;
+  font-weight:700;
+  box-shadow:0 5px 13px rgba(190,35,112,.16);
+}
+.btn:hover{box-shadow:0 7px 17px rgba(190,35,112,.22)}
+.btn.secondary{
+  background:#FCE5F0;
+  color:#A91E64;
+  box-shadow:none;
+  border:1px solid #F3CFE0;
+}
+input,select,textarea{
+  width:100%;
+  min-width:0;
+  border:1px solid #E8D4DF;
+  border-radius:12px;
+  padding:13px 14px;
+  background:#FFFCFE;
+  color:var(--ink);
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:#D63384;
+  box-shadow:0 0 0 3px rgba(214,51,132,.10);
+}
+label{font-size:13px;font-weight:700;display:block;margin:13px 0 7px}
+.spacer{height:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.badge{
+  display:inline-block;
+  padding:6px 11px;
+  border-radius:30px;
+  background:#FCE5F0;
+  color:#A91E64;
+  font-size:12px;
+  font-weight:700;
+}
+.order{
+  background:#FFFCFE;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:18px;
+  margin-top:13px;
+}
+.auth{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:radial-gradient(ellipse at top left,#FADCEB 0,transparent 48%),var(--bg);
+}
+.authbox{width:min(460px,100%);padding:30px}
+.tabs{display:flex;gap:8px;margin:22px 0 17px}
+.tab{
+  flex:1;
+  padding:12px 10px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#FFF8FC;
+  color:var(--muted);
+  font-weight:700;
+}
+.tab.active{
+  background:#FCE5F0;
+  color:#A91E64;
+  border-color:#F1C7DB;
+}
+.toast{
+  position:fixed;
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(460px,calc(100% - 32px));
+  background:#35212D;
+  color:white;
+  padding:14px 18px;
+  border-radius:14px;
+  box-shadow:0 8px 25px rgba(0,0,0,.15);
+  z-index:1000;
+}
+@media(min-width:761px){
+  .wrap{padding-top:34px}
+}
+@media(max-width:900px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .grid,.grid2{grid-template-columns:1fr}
+  .topin{flex-wrap:wrap}
+  .wrap{padding:20px 15px 45px}
+  .card{padding:19px}
+  .hero{padding:24px 20px;border-radius:20px}
+  .authbox{padding:23px}
+  .brand{font-size:22px}
+  .btn{max-width:100%}
+}
 </style>
 </head>
 <body>
