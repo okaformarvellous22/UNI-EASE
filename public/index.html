@@ -256,7 +256,130 @@ async function boot(){
   catch{localStorage.removeItem('ca_token');state.token=null;renderAuth()}
  }else renderAuth();
 }
+function renderLanding(){
+ app.innerHTML=`
+ <div class="landing">
+  <nav>
+   <a href="#home" class="logo">🎓 UNI <span>EASE</span></a>
+   <div class="navlinks">
+    <a href="#home">Home</a>
+    <a href="#services">Services</a>
+    <a href="#about">About</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact">Contact</a>
+   </div>
+   <div>
+    <button class="action outline" id="landingLogin">Login</button>
+    <button class="action" id="landingStart">Get Started</button>
+   </div>
+  </nav>
 
+  <section class="hero-home" id="home">
+   <div>
+    <span class="pill">✦ CAMPUS ERRAND SERVICES</span>
+    <h1>UNI <span class="pink">EASE</span></h1>
+    <h1>Your time. Your focus.<br>We've got the rest.</h1>
+    <p>Need something done on campus? From document drops to grocery runs, Uni Ease connects you with assistants to handle your errands quickly and conveniently.</p>
+    <button class="action" id="landingRequest">Request an Errand →</button>
+    <a href="#services" class="action outline">Explore Services</a>
+    <div class="trust">
+     <span>✓ Trusted assistance</span>
+     <span>⚡ Convenient service</span>
+     <span>♡ Customer support</span>
+    </div>
+   </div>
+   <div>
+    <img src="/uni-ease-ambassador.png"
+     alt="Uni Ease campus ambassador wearing a pink Uni Ease shirt"
+     onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=pill>UNI EASE · YOUR CAMPUS ERRAND PARTNER</div>')">
+   </div>
+  </section>
+
+  <section class="section" id="services">
+   <span class="pill">WHAT WE OFFER</span>
+   <h2>Our <span class="pink">Services</span></h2>
+   <p>Choose a service and let us help you get it done.</p>
+   <div class="services-grid">
+    <a href="#services" class="service-card" data-service="Parcel Pickup & Delivery">
+     <div class="icon">📦</div><h3>Parcel Pickup & Delivery</h3>
+     <p class="muted">Send and receive packages on campus.</p>
+     <strong class="pink">Request service →</strong>
+    </a>
+    <a href="#services" class="service-card" data-service="Printing / Photocopy">
+     <div class="icon">🖨️</div><h3>Printing & Photocopying</h3>
+     <p class="muted">Get your documents printed or copied.</p>
+     <strong class="pink">Request service →</strong>
+    </a>
+    <a href="#services" class="service-card" data-service="Assignment / Document Drop-off">
+     <div class="icon">📄</div><h3>Assignment & Document Submission</h3>
+     <p class="muted">Drop off assignments, forms and documents.</p>
+     <strong class="pink">Request service →</strong>
+    </a>
+    <a href="#services" class="service-card" data-service="Queueing Service">
+     <div class="icon">🧍</div><h3>Queueing Services</h3>
+     <p class="muted">Save time on eligible queues and collections.</p>
+     <strong class="pink">Request service →</strong>
+    </a>
+    <a href="#services" class="service-card" data-service="Food / Grocery Run">
+     <div class="icon">🛍️</div><h3>Food & Grocery Runs</h3>
+     <p class="muted">Get food and everyday essentials delivered.</p>
+     <strong class="pink">Request service →</strong>
+    </a>
+    <a href="#services" class="service-card" data-service="Other Campus Errand">
+     <div class="icon">✨</div><h3>Other Campus Errands</h3>
+     <p class="muted">Have another errand? Tell us what you need.</p>
+     <strong class="pink">Request service →</strong>
+    </a>
+   </div>
+  </section>
+
+  <section class="how" id="about">
+   <span class="pill">HOW IT WORKS</span>
+   <h2>Simple. Fast. <span class="pink">Convenient.</span></h2>
+   <p>Getting your campus errands done is just a few clicks away.</p>
+   <div class="steps">
+    <div><h3>① Request</h3><p>Tell us what you need and where it should go.</p></div>
+    <div><h3>② We Assign</h3><p>Your request can be assigned to an available assistant.</p></div>
+    <div><h3>③ Track & Relax</h3><p>Follow your order status and communicate through order chat.</p></div>
+   </div>
+  </section>
+
+  <section class="section" id="faq">
+   <h2>Frequently Asked <span class="pink">Questions</span></h2>
+   <details class="service-card"><summary>How do I request an errand?</summary><p>Create an account, select a service and submit your order details.</p></details>
+   <details class="service-card"><summary>Can I track my order?</summary><p>Yes. Sign in to view your orders and their current status.</p></details>
+   <details class="service-card"><summary>Can I contact my assistant?</summary><p>Use the chat attached to your order when available.</p></details>
+   <details class="service-card"><summary>How do I get help?</summary><p>Contact Uni Ease using the WhatsApp support button below.</p></details>
+  </section>
+
+  <footer id="contact">
+   <h2>UNI EASE</h2>
+   <p>Your time. Your focus. We've got the rest.</p>
+   <div class="footerlinks">
+    <a href="#home">Home</a>
+    <a href="#services">Services</a>
+    <a href="#about">About</a>
+    <a href="#faq">FAQ</a>
+    <a href="https://wa.me/2348168125418" target="_blank" rel="noopener">WhatsApp Support</a>
+   </div>
+   <p>© ${new Date().getFullYear()} Uni Ease. All rights reserved.</p>
+  </footer>
+ </div>`;
+
+ document.getElementById('landingLogin').onclick=()=>renderAuth('login');
+ document.getElementById('landingStart').onclick=()=>renderAuth('signup');
+ document.getElementById('landingRequest').onclick=()=>renderAuth('signup');
+
+ document.querySelectorAll('.landing [data-service]').forEach(card=>{
+  card.onclick=e=>{
+   e.preventDefault();
+   const service=card.dataset.service;
+   renderAuth('signup');
+   sessionStorage.setItem('ue_requested_service',service);
+   toast('Create an account or log in to request: '+service);
+  };
+ });
+}
 function renderAuth(){
  app.innerHTML=`<div class="auth"><div class="authbox">
  <div class="brand" style="color:#D63384">UNI <span>EASE</span></div>
