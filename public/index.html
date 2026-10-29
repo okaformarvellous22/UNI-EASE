@@ -86,9 +86,6 @@ function renderAuth(){
  <button class="tab" id="signupTab">Create account</button>
  </div>
  <form id="authForm"></form>
- <p class="muted">Demo customer: customer@campusassist.local / customer123</p>
- <p class="muted">Demo worker: worker@campusassist.local / worker123</p>
- <p class="muted">Demo admin: admin@campusassist.local / admin123</p>
  </div></div>`;
 
  let mode='login';
@@ -134,9 +131,10 @@ async function render(){
  app.innerHTML=`<header class="top"><div class="topin">
  <div class="brand">UNI <span>EASE</span></div>
  <div>${esc(state.user.name)} · ${esc(state.user.role)}
- <button class="btn secondary" id="logout">Logout</button></div>
+ <button class="btn secondary" id="changePassword">Change password</button> <button class="btn secondary" id="logout">Logout</button></div>
  </div></header><main class="wrap" id="main"></main>`;
 
+ document.getElementById('changePassword').onclick=()=>showChangePassword();
  document.getElementById('logout').onclick=async()=>{
   try{await api('/api/logout',{method:'POST'})}catch{}
   localStorage.removeItem('ca_token');state.token=null;state.user=null;renderAuth();
@@ -161,6 +159,7 @@ async function customer(m){
  ${status(o.status)}<p>${esc(o.description)}</p>
  <p>${esc(o.delivery)} · <strong>${money(o.price)}</strong></p>
  <button class="btn secondary" onclick="viewOrder(${o.id})">Track order</button>
+ <button class="btn secondary" onclick="viewChat(${o.id})">Order chat</button>
  ${o.status==='completed'?`<button class="btn secondary" onclick="rateOrder(${o.id})">Rate</button>`:''}
  </div>`).join(''):'<p class="muted">No orders yet.</p>'}</div>
  </div><div class="card"><h2>How it works</h2>
@@ -177,13 +176,12 @@ async function newOrder(m){
  <form id="orderForm">
  <label>Service</label><select id="service">${s.services.map(x=>`<option value="${esc(x.name)}" data-base="${x.base}">${esc(x.name)} — from ${money(x.base)}</option>`).join('')}</select>
  <label>What do you need?</label><textarea id="description" rows="4" required></textarea>
-<label for="pickup">Pickup location</label>
-<input id="pickup" name="pickup" type="text" placeholder="Enter pickup address" required>
-
-<label for="delivery">Delivery / destination</label>
-<input id="delivery" name="delivery" type="text" placeholder="Enter delivery address" required> 
- 
- <label>Price (₦)</label><input id="price" type="number" min="1500" value="1500" required>
+ <label for="pickup">Pickup location</label>
+ <input id="pickup" name="pickup" type="text" placeholder="Enter pickup address" required>
+ <label for="delivery">Delivery / destination</label>
+ <input id="delivery" name="delivery" type="text" placeholder="Enter delivery address" required>
+ <label>Service price (₦)</label><input id="price" type="number" min="0" value="${s.services[0]?.base??1500}" readonly required>
+ <p class="muted">Price is set by Uni Ease. You will see the current service price here.</p>
  <div class="spacer"></div><button class="btn">Place order</button>
  </form></div>`;
 
@@ -194,8 +192,11 @@ async function newOrder(m){
   e.preventDefault();
   try{
    await api('/api/orders',{method:'POST',body:JSON.stringify({
-    service:service.value,description:description.value,pickup:pickup.value,
-    delivery:delivery.value,price:Number(price.value)
+    service:document.getElementById('service').value,
+    description:document.getElementById('description').value,
+    pickup:document.getElementById('pickup').value,
+    delivery:document.getElementById('delivery').value,
+    price:Number(document.getElementById('price').value)
    })});
    toast('Order placed successfully');await dashboard();
   }catch(x){toast(x.message)}
@@ -207,10 +208,11 @@ async function viewOrder(id){
  document.getElementById('main').innerHTML=`<div class="card">
  <h2>Order #${o.id}</h2><p>${esc(o.service)} · ${status(o.status)}</p>
  <p>${esc(o.description)}</p><p>Pickup location: ${esc(o.pickup || 'Not provided')}</p>
-<p>Delivery location: ${esc(o.delivery)}</p>
+ <p>Delivery location: ${esc(o.delivery)}</p>
  <p>Assistant: ${esc(o.worker_name||'Waiting for assignment')}</p>
  <h3>Progress</h3>${d.events.map(e=>`<p>${esc(e.status)} — ${esc(e.note||'')}</p>`).join('')}
- ${true?`<button class="btn" onclick="complaint(${o.id})">Report a problem</button>`:''}
+ <button class="btn" onclick="viewChat(${o.id})">Open order chat</button>
+ <button class="btn" onclick="complaint(${o.id})">Report a problem</button>
  <button class="btn secondary" onclick="dashboard()">Back</button></div>`;
 }
 
@@ -232,6 +234,7 @@ async function rateOrder(id){
   toast('Thanks for your feedback');await dashboard();
  }catch(e){toast(e.message)}
 }
+
 async function worker(m){
  const d=await api('/api/orders');
  const available=d.orders.filter(o=>o.status==='pending'&&!o.worker_id);
@@ -252,25 +255,26 @@ async function worker(m){
  <p>${esc(o.description)}</p>
  <p>📍 Pickup location: ${esc(o.pickup||'Not provided')}</p>
  <p>🏁 Delivery location: ${esc(o.delivery||'Not provided')}</p>
+ <button class="btn secondary" onclick="viewChat(${o.id})">Order chat</button>
  ${o.status==='accepted'?`<button class="btn" onclick="setStatus(${o.id},'in_progress')">Start job</button>`:''}
  ${o.status==='in_progress'?`<button class="btn" onclick="setStatus(${o.id},'completed')">Mark completed</button>`:''}
  </div>`).join('')||'<p>No assigned orders.</p>'}
  </div></div>`;
 }
 
-
 async function acceptOrder(id){
  try{await api('/api/orders/'+id+'/accept',{method:'POST'});toast('Job accepted');await dashboard()}
  catch(e){toast(e.message)}
 }
+
 async function setStatus(id,s){
  try{await api('/api/orders/'+id+'/status',{method:'POST',body:JSON.stringify({status:s})});toast('Order updated');await dashboard()}
  catch(e){toast(e.message)}
 }
 
 async function admin(m){
- const [orders,workers,stats,complaints]=await Promise.all([
-  api('/api/orders'),api('/api/workers'),api('/api/stats'),api('/api/complaints')
+ const [orders,workers,stats,complaints,services]=await Promise.all([
+  api('/api/orders'),api('/api/workers'),api('/api/stats'),api('/api/complaints'),api('/api/services')
  ]);
 
  m.innerHTML=`<section class="hero"><h1>Admin control center</h1>
@@ -278,18 +282,107 @@ async function admin(m){
  <div class="grid"><div class="card">Orders<h1>${stats.total}</h1></div>
  <div class="card">Active jobs<h1>${stats.pending}</h1></div>
  <div class="card">Completed value<h1>${money(stats.revenue)}</h1></div></div>
+ <div class="card" style="margin:14px 0"><h2>Manage service prices</h2>
+ <p class="muted">Changes apply to new orders only. Existing orders keep their original price.</p>
+ <div class="grid2">${services.services.map(s=>`<form class="order priceForm" data-service-id="${s.id}">
+ <label>${esc(s.name)}</label><input type="number" name="base" min="0" max="100000000" step="1" value="${s.base}" required>
+ <div class="spacer"></div><button class="btn">Save price</button></form>`).join('')}</div></div>
  <div class="grid2"><div class="card"><h2>Orders</h2>
  ${orders.orders.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
  ${status(o.status)}<p>${esc(o.customer_name)} · ${esc(o.delivery)}</p>
- <p>${esc(o.description)}</p></div>`).join('')||'<p>No orders.</p>'}
+ <p>${esc(o.description)}</p><p><strong>${money(o.price)}</strong></p>
+ <button class="btn secondary" onclick="viewChat(${o.id})">View order chat/files</button></div>`).join('')||'<p>No orders.</p>'}
  </div><div class="card"><h2>Workers</h2>
  ${workers.workers.map(w=>`<div class="order"><strong>${esc(w.name)}</strong><p>${esc(w.email)}</p></div>`).join('')}
  <h2>Open complaints</h2>
- ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`<div class="order"><strong>Order #${c.order_id}</strong><p>${esc(c.message)}</p><button class="btn" onclick="resolveComplaint(${c.id})">Resolve</button></div>`).join('')||'<p>No open complaints.</p>'}
+ ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`<div class="order"><strong>Order #${c.order_id}</strong>
+ <p>${esc(c.message)}</p><button class="btn" onclick="resolveComplaint(${c.id})">Resolve</button></div>`).join('')||'<p>No open complaints.</p>'}
  </div></div>`;
+
+ m.querySelectorAll('.priceForm').forEach(form=>form.onsubmit=async e=>{
+  e.preventDefault();
+  const id=form.dataset.serviceId;
+  const base=Number(new FormData(form).get('base'));
+  if(!Number.isSafeInteger(base)||base<0){toast('Enter a valid price');return}
+  const button=form.querySelector('button');button.disabled=true;
+  try{await api('/api/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({base})});toast('Service price saved');await admin(m)}
+  catch(err){toast(err.message);button.disabled=false}
+ });
+}
+
+async function viewChat(id){
+ const main=document.getElementById('main');
+ try{
+  const d=await api(`/api/orders/${id}/messages`);
+  main.innerHTML=`<div class="card"><div class="between"><div><h2>Order #${id} chat</h2>
+  <p class="muted">Messages and files are visible to the customer, assigned worker, and Uni Ease admin.</p></div>
+  <button class="btn secondary" onclick="dashboard()">Back</button></div>
+  <div id="chatMessages">${d.messages.map(renderMessage).join('')||'<p class="muted">No messages yet. Send a message or attach a file below.</p>'}</div>
+  <form id="chatForm"><label>Message</label><textarea id="chatText" rows="3" maxlength="2000" placeholder="Write a message about this order"></textarea>
+  <label>Attach photo, video, PDF, or Word document (max 10 MB)</label>
+  <input id="chatFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf,.doc,.docx,.txt">
+  <div class="spacer"></div><button class="btn" id="sendChat">Send</button>
+  <button type="button" class="btn secondary" onclick="viewChat(${id})">Refresh chat</button></form></div>`;
+
+  document.getElementById('chatForm').onsubmit=async e=>{
+   e.preventDefault();
+   const button=document.getElementById('sendChat');button.disabled=true;
+   try{
+    const message=document.getElementById('chatText').value.trim();
+    const file=document.getElementById('chatFile').files[0];
+    const payload={message};
+    if(file){
+     if(file.size>10*1024*1024)throw new Error('Each file must be 10 MB or smaller.');
+     payload.file={name:file.name,type:file.type||'application/octet-stream',data:await fileToDataUrl(file)};
+    }
+    if(!message&&!file)throw new Error('Write a message or choose a file first.');
+    await api(`/api/orders/${id}/messages`,{method:'POST',body:JSON.stringify(payload)});
+    toast('Message sent');await viewChat(id);
+   }catch(err){toast(err.message);button.disabled=false}
+  };
+ }catch(e){toast(e.message)}
+}
+
+function fileToDataUrl(file){
+ return new Promise((resolve,reject)=>{
+  const r=new FileReader();
+  r.onload=()=>resolve(r.result);
+  r.onerror=()=>reject(new Error('Could not read this file.'));
+  r.readAsDataURL(file);
+ });
+}
+
+function renderMessage(m){
+ const file=m.file_url?`<p><a href="${esc(m.file_url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(m.file_name||'Open attachment')}</a> <span class="muted">(${(Number(m.file_size||0)/1024/1024).toFixed(2)} MB)</span></p>`:'';
+ return `<div class="order"><div class="between"><strong>${esc(m.sender_name)} (${esc(m.sender_role)})</strong><span class="muted">${esc(m.created_at)}</span></div>
+ ${m.message?`<p style="white-space:pre-wrap">${esc(m.message)}</p>`:''}${file}
+ ${m.file_path&&!m.file_url?'<p class="muted">Attachment link unavailable. Check Supabase storage configuration.</p>':''}</div>`;
 }
 
 async function dashboard(){await render()}
+
+function showChangePassword(){
+ const main=document.getElementById('main');
+ main.innerHTML=`<div class="card"><h2>Change password</h2>
+ <p class="muted">Choose a new password with at least 8 characters. Your current login will remain active.</p>
+ <form id="changePasswordForm">
+ <label>Current password</label><input name="currentPassword" type="password" autocomplete="current-password" required>
+ <label>New password</label><input name="newPassword" type="password" minlength="8" autocomplete="new-password" required>
+ <label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" autocomplete="new-password" required>
+ <div class="spacer"></div><button class="btn">Save new password</button>
+ <button class="btn secondary" type="button" onclick="dashboard()">Cancel</button></form></div>`;
+
+ document.getElementById('changePasswordForm').onsubmit=async e=>{
+  e.preventDefault();
+  const b=Object.fromEntries(new FormData(e.currentTarget).entries());
+  if(b.newPassword!==b.confirmPassword){toast('The new passwords do not match.');return}
+  try{
+   const d=await api('/api/change-password',{method:'POST',body:JSON.stringify({currentPassword:b.currentPassword,newPassword:b.newPassword})});
+   toast(d.message||'Password changed.');await dashboard();
+  }catch(err){toast(err.message)}
+ };
+}
+
 async function resolveComplaint(id){
  if(!confirm('Mark this complaint as resolved?'))return;
  try{
@@ -298,9 +391,12 @@ async function resolveComplaint(id){
   await render();
  }catch(e){toast(e.message)}
 }
- window.viewOrder=viewOrder;
+
+window.showChangePassword=showChangePassword;
+window.viewOrder=viewOrder;
+window.viewChat=viewChat;
 window.resolveComplaint=resolveComplaint;
- window.complaint=complaint;
+window.complaint=complaint;
 window.rateOrder=rateOrder;
 window.acceptOrder=acceptOrder;
 window.setStatus=setStatus;
