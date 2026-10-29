@@ -252,7 +252,34 @@ async function api(req,res) {
         return send(res,201,{ok:true,messageId:rows[0]?.id||null});
       }
     }
+    if(req.method==='POST' && p==='/api/workers') {
+      if(user.role!=='admin') return send(res,403,{error:'Admins only.'});
+      const b=await readBody(req);
+      const name=String(b.name||'').trim();
+      const email=String(b.email||'').trim().toLowerCase();
+      const phone=String(b.phone||'').trim();
+      const password=String(b.password||'');
 
+      if(!name||!email||password.length<8)
+        return send(res,400,{error:'Name, email and a password of at least 8 characters are required.'});
+
+      if(await getUserByEmail(email))
+        return send(res,409,{error:'That email is already registered.'});
+
+      const rows=await table('users','',{method:'POST',body:{
+        name,email,phone,
+        password_hash:hashPassword(password),
+        role:'worker',
+        active:true
+      }});
+
+      if(!rows[0]) throw new Error('Worker account was not created.');
+
+      return send(res,201,{
+        message:'Worker account created successfully.',
+        worker:{id:Number(rows[0].id),name:rows[0].name,email:rows[0].email,phone:rows[0].phone||''}
+      });
+    }
     if(req.method==='GET' && p==='/api/workers') {
       if(user.role!=='admin') return send(res,403,{error:'Admins only.'});
       const workers=await table('users','role=eq.worker&select=id,name,email,phone,active,created_at&order=name.asc');
