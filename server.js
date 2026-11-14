@@ -142,7 +142,7 @@ async function api(req,res) {
     if(req.method==='POST' && p==='/api/signup') {
       const b=await readBody(req);
       if(!b.name||!b.email||!b.password) return send(res,400,{error:'Name, email and password are required.'});
-      if(String(b.password).length<6) return send(res,400,{error:'Password must be at least 8 characters.'});
+      if(String(b.password).length<8) return send(res,400,{error:'Password must be at least 8 characters.'});
       const email=String(b.email).trim().toLowerCase();
       if(await getUserByEmail(email)) return send(res,409,{error:'That email is already registered.'});
       const rows=await table('users','',{method:'POST',body:{name:String(b.name).trim(),email,password_hash:hashPassword(b.password),role:'customer',phone:String(b.phone||''),active:true}});
@@ -217,13 +217,40 @@ async function api(req,res) {
       const events=await table('order_events',`order_id=eq.${queryValue(id)}&select=*&order=id.asc`);
       const namedEvents=[]; for(const e of events){const actor=e.actor_id?await getById('users',e.actor_id):null; namedEvents.push({...e,actor_name:actor?.name||''});}
       return send(res,200,{order:{...o,customer_name:customer?.name||'',customer_phone:customer?.phone||'',worker_name:worker?.name||''},events:namedEvents});
+    }if(orderMatch && req.method==='POST' && orderMatch[2]==='accept') {
+  if(user.role!=='worker') return send(res,403,{error:'Workers only.'});
+  const id=Number(orderMatch[1]);
+
+  const rows=await table('orders',
+    `id=eq.${queryValue(id)}&worker_id=is.null&status=eq.pending`,
+    {
+      method:'PATCH',
+      body:{
+        worker_id:Number(user.id),
+        status:'accepted',
+        updated_at:new Date().toISOString()
+      }
     }
-    if(orderMatch && req.method==='POST' && orderMatch[2]==='accept') {
-      if(user.role!=='worker') return send(res,403,{error:'Workers only.'});
-      const id=Number(orderMatch[1]); const o=await getById('orders',id);
-      if(!o || (o.worker_id!=null&&Number(o.worker_id)!==Number(user.id)) || o.status!=='pending') return send(res,404,{error:'Order unavailable.'});
-      await table('orders',`id=eq.${queryValue(id)}`,{method:'PATCH',body:{worker_id:Number(user.id)}});
-      await createEvent(id,user.id,'accepted','Worker accepted the order'); return send(res,200,{ok:true});
+  );
+
+  if(!rows.length) {
+    return send(res,409,{
+      error:'Order has already been accepted or is no longer available. Refresh your orders.'
+    });
+  }
+
+  await table('order_events','',{
+    method:'POST',
+    body:{
+      order_id:id,
+      actor_id:Number(user.id),
+      status:'accepted',
+      note:'Worker accepted the order'
+    }
+  });
+
+  return send(res,200,{ok:true});
+
     }
     if(orderMatch && req.method==='POST' && orderMatch[2]==='status') {
       if(!['worker','admin'].includes(user.role)) return send(res,403,{error:'Not allowed.'});
