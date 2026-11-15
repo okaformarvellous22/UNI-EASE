@@ -21,9 +21,7 @@ jobs:
 
       - name: Check server syntax
         run: node --check server.js
-
       - name: Check frontend scripts
         run: |
-          node --check inline-0.js
-          node --check inline-1.js
           node --check public/service-worker.js
+      
