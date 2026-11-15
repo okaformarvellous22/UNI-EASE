@@ -543,27 +543,95 @@ async function render(){
 
 async function customer(m){
  const d=await api('/api/orders');
- m.innerHTML=`<section class="hero">
- <h1>Your time. Your focus. We've got the rest.</h1>
- <p class="muted">Request a campus errand and track it from your phone.</p>
- <button class="btn" id="newOrder">+ Request an errand</button>
- </section><div class="grid2">
- <div class="card"><h2>My orders</h2>
- <div>${d.orders.length?d.orders.map(o=>`
- <div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
- ${status(o.status)}<p>${esc(o.description)}</p>
- <p>${esc(o.delivery)} · <strong>${money(o.price)}</strong></p>
- <button class="btn secondary" onclick="viewOrder(${o.id})">Track order</button>
- <button class="btn secondary" onclick="viewChat(${o.id})">Order chat</button>
- ${o.status==='completed'?`<button class="btn secondary" onclick="rateOrder(${o.id})">Rate</button>`:''}
- </div>`).join(''):'<p class="muted">No orders yet.</p>'}</div>
- </div><div class="card"><h2>How it works</h2>
- <p>1. Tell us what you need.</p><p>2. We assign an assistant.</p>
- <p>3. Follow the status.</p><p>4. Get it done.</p></div></div>`;
+
+ m.innerHTML=`
+ <div class="customer-dashboard">
+
+   <section class="customer-welcome">
+     <p>WELCOME TO UNI EASE 💗</p>
+     <h1>Your time. Your focus. We've got the rest.</h1>
+     <p>What do you need help with today?</p>
+     <button class="btn" id="newOrder">+ Request an errand</button>
+   </section>
+
+   <div class="customer-section-title">
+     <h2>Our Services</h2>
+   </div>
+
+   <div class="customer-services">
+     <div class="customer-service" onclick="document.getElementById('newOrder').click()">
+       <div class="service-icon">📦</div>
+       <h3>Parcel Pickup</h3>
+       <p>Send and receive your packages.</p>
+     </div>
+
+     <div class="customer-service" onclick="document.getElementById('newOrder').click()">
+       <div class="service-icon">🖨️</div>
+       <h3>Printing & Photocopy</h3>
+       <p>Get your documents printed.</p>
+     </div>
+
+     <div class="customer-service" onclick="document.getElementById('newOrder').click()">
+       <div class="service-icon">📚</div>
+       <h3>Academic Runs</h3>
+       <p>Assignments, SIWES and submissions.</p>
+     </div>
+
+     <div class="customer-service" onclick="document.getElementById('newOrder').click()">
+       <div class="service-icon">⏳</div>
+       <h3>Queue Services</h3>
+       <p>Let us help you save time.</p>
+     </div>
+
+     <div class="customer-service" onclick="document.getElementById('newOrder').click()">
+       <div class="service-icon">🛍️</div>
+       <h3>Food & Groceries</h3>
+       <p>Get your essentials delivered.</p>
+     </div>
+
+     <div class="customer-service" onclick="document.getElementById('newOrder').click()">
+       <div class="service-icon">✨</div>
+       <h3>Other Errands</h3>
+       <p>Tell us what you need.</p>
+     </div>
+   </div>
+
+   <div class="customer-section-title" id="myOrders">
+     <h2>My Orders</h2>
+   </div>
+
+   <div class="card">
+     ${d.orders.length ? d.orders.map(o=>`
+       <div class="order">
+         <strong>#${o.id} · ${esc(o.service)}</strong>
+         ${status(o.status)}
+         <p>${esc(o.description)}</p>
+         <p>${esc(o.delivery)} · <strong>${money(o.price)}</strong></p>
+         <button class="btn secondary" onclick="viewOrder(${o.id})">Track order</button>
+         <button class="btn secondary" onclick="viewChat(${o.id})">Order chat</button>
+         ${o.status==='completed'?`<button class="btn secondary" onclick="rateOrder(${o.id})">Rate</button>`:''}
+       </div>
+     `).join(''):'<p class="muted">You have no orders yet. Your next errand starts here!</p>'}
+   </div>
+
+   <div class="card" style="margin-top:20px">
+     <h2>How Uni Ease Works</h2>
+     <p>📝 Tell us what you need.</p>
+     <p>🤝 We assign an assistant.</p>
+     <p>📍 Track your order.</p>
+     <p>💗 Relax while we handle it.</p>
+   </div>
+
+   <nav class="customer-bottom-nav">
+     <button class="active" onclick="window.scrollTo({top:0,behavior:'smooth'})">⌂<br>Home</button>
+     <button onclick="document.getElementById('myOrders').scrollIntoView({behavior:'smooth'})">▤<br>My Orders</button>
+     <button onclick="document.getElementById('newOrder').click()">＋<br>Request</button>
+   </nav>
+
+ </div>`;
 
  document.getElementById('newOrder').onclick=()=>newOrder(m);
 }
-
 async function newOrder(m){
  const s=await api('/api/services');
  m.innerHTML=`<div class="card"><h2>Request an errand</h2>
