@@ -223,6 +223,100 @@ label{font-size:13px;font-weight:700;display:block;margin:13px 0 7px}
   .brand{font-size:22px}
   .btn{max-width:100%}
 }
+    /* UNI EASE CUSTOMER DASHBOARD REDESIGN */
+
+.customer-dashboard {
+  padding-bottom: 85px;
+}
+
+.customer-welcome {
+  background: linear-gradient(120deg,#D63384,#F078AE);
+  color: white;
+  padding: 28px 22px;
+  border-radius: 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 10px 25px #d6338430;
+}
+
+.customer-welcome h1 {
+  font-size: 27px;
+}
+
+.customer-welcome p {
+  color: #fff0f7;
+}
+
+.customer-search {
+  margin: 20px 0;
+}
+
+.customer-services {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 13px;
+  margin: 18px 0 28px;
+}
+
+.customer-service {
+  background: white;
+  border: 1px solid #F3D5E4;
+  border-radius: 19px;
+  padding: 19px 14px;
+  box-shadow: 0 5px 18px #9e28600c;
+}
+
+.customer-service .service-icon {
+  font-size: 30px;
+  margin-bottom: 12px;
+}
+
+.customer-service h3 {
+  font-size: 15px;
+}
+
+.customer-service p {
+  font-size: 12px;
+  color: #887582;
+}
+
+.customer-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 25px 0 14px;
+}
+
+.customer-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #F0DCE7;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 5px;
+  z-index: 500;
+  box-shadow: 0 -5px 20px #9e286010;
+}
+
+.customer-bottom-nav button {
+  background: none;
+  border: 0;
+  color: #887582;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.customer-bottom-nav button.active {
+  color: #D63384;
+}
+
+@media(max-width:760px) {
+  .customer-services {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
 </style>
 </head>
 <body>
