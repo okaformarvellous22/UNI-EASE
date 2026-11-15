@@ -736,43 +736,167 @@ async function setStatus(id,s){
 }
 
 async function admin(m){
- const [orders,workers,stats,complaints,services]=await Promise.all([
-  api('/api/orders'),api('/api/workers'),api('/api/stats'),api('/api/complaints'),api('/api/services')
- ]);
+  const [orders,workers,stats,complaints,services]=await Promise.all([
+    api('/api/orders'),
+    api('/api/workers'),
+    api('/api/stats'),
+    api('/api/complaints'),
+    api('/api/services')
+  ]);
 
- m.innerHTML=`<section class="hero"><h1>Admin control center</h1>
- <p>Monitor orders, assign assistants, and protect service quality.</p></section>
- <div class="grid"><div class="card">Orders<h1>${stats.total}</h1></div>
- <div class="card">Active jobs<h1>${stats.pending}</h1></div>
- <div class="card">Completed value<h1>${money(stats.revenue)}</h1></div></div>
- <div class="card" style="margin:14px 0"><h2>Manage service prices</h2>
- <p class="muted">Changes apply to new orders only. Existing orders keep their original price.</p>
- <div class="grid2">${services.services.map(s=>`<form class="order priceForm" data-service-id="${s.id}">
- <label>${esc(s.name)}</label><input type="number" name="base" min="0" max="100000000" step="1" value="${s.base}" required>
- <div class="spacer"></div><button class="btn">Save price</button></form>`).join('')}</div></div>
- <div class="grid2"><div class="card"><h2>Orders</h2>
- ${orders.orders.map(o=>`<div class="order"><strong>#${o.id} · ${esc(o.service)}</strong>
- ${status(o.status)}<p>${esc(o.customer_name)} · ${esc(o.delivery)}</p>
- <p>${esc(o.description)}</p><p><strong>${money(o.price)}</strong></p>
- <button class="btn secondary" onclick="viewChat(${o.id})">View order chat/files</button></div>`).join('')||'<p>No orders.</p>'}
- </div><div class="card"><h2>Workers</h2>
- ${workers.workers.map(w=>`<div class="order"><strong>${esc(w.name)}</strong><p>${esc(w.email)}</p></div>`).join('')}
- <h2>Open complaints</h2>
- ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`<div class="order"><strong>Order #${c.order_id}</strong>
- <p>${esc(c.message)}</p><button class="btn" onclick="resolveComplaint(${c.id})">Resolve</button></div>`).join('')||'<p>No open complaints.</p>'}
- </div></div>`;
+  m.innerHTML=`
+    <section class="hero">
+      <h1>Admin control center</h1>
+      <p>Monitor orders, manage workers and protect service quality.</p>
+    </section>
 
- m.querySelectorAll('.priceForm').forEach(form=>form.onsubmit=async e=>{
-  e.preventDefault();
-  const id=form.dataset.serviceId;
-  const base=Number(new FormData(form).get('base'));
-  if(!Number.isSafeInteger(base)||base<0){toast('Enter a valid price');return}
-  const button=form.querySelector('button');button.disabled=true;
-  try{await api('/api/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({base})});toast('Service price saved');await admin(m)}
-  catch(err){toast(err.message);button.disabled=false}
- });
+    <div class="grid">
+      <div class="card">Orders<h1>${stats.total}</h1></div>
+      <div class="card">Active jobs<h1>${stats.pending}</h1></div>
+      <div class="card">Completed value<h1>${money(stats.revenue)}</h1></div>
+      <div class="card">Workers<h1>${stats.workers}</h1></div>
+    </div>
+
+    <div class="card" style="margin:14px 0">
+      <h2>Manage service prices</h2>
+      <p class="muted">Changes apply to new orders only.</p>
+      <div class="grid2">
+        ${services.services.map(s=>`
+          <form class="order priceForm" data-service-id="${esc(s.id)}">
+            <label>${esc(s.name)}</label>
+            <input type="number" name="base" min="0" max="100000000" value="${s.base}" required>
+            <button class="btn">Save price</button>
+          </form>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Orders</h2>
+        ${orders.orders.map(o=>`
+          <div class="order">
+            <strong>#${o.id} · ${esc(o.service)}</strong>
+            ${status(o.status)}
+            <p>${esc(o.customer_name)} · ${esc(o.delivery)}</p>
+            <p>${esc(o.description)}</p>
+            <p><strong>${money(o.price)}</strong></p>
+            <button class="btn secondary" onclick="viewChat(${o.id})">
+              View order chat/files
+            </button>
+          </div>
+        `).join('')||'<p>No orders.</p>'}
+      </div>
+
+      <div class="card">
+        <h2>Workers</h2>
+
+        <form id="workerForm" class="order">
+          <h3>Add a new worker</h3>
+
+          <label>Full name</label>
+          <input name="name" type="text" required>
+
+          <label>Email address</label>
+          <input name="email" type="email" required>
+
+          <label>Phone number</label>
+          <input name="phone" type="tel">
+
+          <label>Temporary password</label>
+          <input name="password" type="password"
+                 minlength="8" autocomplete="new-password" required>
+
+          <p class="muted">
+            Give the worker their login email and temporary password privately.
+            They can change their password after logging in.
+          </p>
+
+          <button class="btn" type="submit">Create worker account</button>
+        </form>
+
+        <h3>Registered workers</h3>
+
+        ${workers.workers.map(w=>`
+          <div class="order">
+            <strong>${esc(w.name)}</strong>
+            <p>${esc(w.email)}</p>
+            <p>${esc(w.phone||'No phone number')}</p>
+            <p>${w.active===false?'Inactive':'Active'}</p>
+          </div>
+        `).join('')||'<p>No workers registered yet.</p>'}
+
+        <h2>Open complaints</h2>
+
+        ${complaints.complaints.filter(c=>c.status!=='resolved').map(c=>`
+          <div class="order">
+            <strong>Order #${c.order_id}</strong>
+            <p>${esc(c.message)}</p>
+            <button class="btn" onclick="resolveComplaint(${c.id})">
+              Resolve
+            </button>
+          </div>
+        `).join('')||'<p>No open complaints.</p>'}
+      </div>
+    </div>
+  `;
+
+  m.querySelectorAll('.priceForm').forEach(form=>{
+    form.onsubmit=async e=>{
+      e.preventDefault();
+
+      const id=form.dataset.serviceId;
+      const base=Number(new FormData(form).get('base'));
+
+      if(!Number.isSafeInteger(base)||base<0){
+        toast('Enter a valid price');
+        return;
+      }
+
+      const button=form.querySelector('button');
+      button.disabled=true;
+
+      try{
+        await api('/api/services/'+encodeURIComponent(id),{
+          method:'PATCH',
+          body:JSON.stringify({base})
+        });
+
+        toast('Service price saved');
+        await admin(m);
+      }catch(err){
+        toast(err.message);
+        button.disabled=false;
+      }
+    };
+  });
+
+  document.getElementById('workerForm').onsubmit=async e=>{
+    e.preventDefault();
+
+    const form=e.currentTarget;
+    const button=form.querySelector('button');
+    const data=Object.fromEntries(new FormData(form).entries());
+
+    button.disabled=true;
+    button.textContent='Creating account...';
+
+    try{
+      const result=await api('/api/workers',{
+        method:'POST',
+        body:JSON.stringify(data)
+      });
+
+      toast(result.message||'Worker account created successfully.');
+      await admin(m);
+
+    }catch(err){
+      toast(err.message);
+      button.disabled=false;
+      button.textContent='Create worker account';
+    }
+  };
 }
-
 async function viewChat(id){
  const main=document.getElementById('main');
  try{
