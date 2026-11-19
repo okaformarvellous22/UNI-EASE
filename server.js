@@ -274,18 +274,91 @@ if (priceMatch && req.method === 'PATCH') {
   return send(res, 200, { service: rows[0] });
 }
     
+if (req.method === 'POST' && p === '/api/orders') {
+  if (user.role !== 'customer') {
+    return send(res, 403, { error: 'Only customers can create orders.' });
+  }
 
-    if(req.method==='POST' && p==='/api/orders') {
-      if(user.role!=='customer') return send(res,403,{error:'Only customers can create orders.'});
-      const b=await readBody(req);
-      if(!b.service||!b.description||!b.delivery) return send(res,400,{error:'Service, description and delivery location are required.'});
-      const priceRows=await table('uni_ease_service_prices',`name=eq.${queryValue(b.service)}&select=name,base&limit=1`);
-      if(!priceRows.length) return send(res,400,{error:'Choose a valid service.'});
-      const rows=await table('orders','',{method:'POST',body:{customer_id:Number(user.id),worker_id:null,service:String(b.service),description:String(b.description).trim(),pickup:String(b.pickup||''),delivery:String(b.delivery).trim(),price:Number(priceRows[0].base),status:'pending'}});
-      const order=rows[0]; if(!order) throw new Error('Order was not returned after creation.');
-      await createEvent(order.id,user.id,'pending','Order created');
-      return send(res,201,{orderId:Number(order.id)});
+  const b = await readBody(req);
+
+  if (!b.service || !b.description || !b.delivery) {
+    return send(res, 400, {
+      error: 'Service, description and delivery location are required.'
+    });
+  }
+
+  const priceRows = await table(
+    'uni_ease_service_prices',
+    `name=eq.${queryValue(b.service)}&select=name,base,pricing_type,unit_label,unit_price,default_platform_fee,default_worker_payment,default_transport_fee,is_active&limit=1`
+  );
+
+  if (!priceRows.length || priceRows[0].is_active === false) {
+    return send(res, 400, { error: 'Choose a valid service.' });
+  }
+
+  const service = priceRows[0];
+  const pricingType = service.pricing_type || 'quote';
+
+  const platformFee = Number(service.default_platform_fee || 0);
+  const workerPayment = Number(service.default_worker_payment || 0);
+  const transportFee = Number(service.default_transport_fee || 0);
+
+  let quantity = null;
+  let unitPrice = 0;
+  let serviceCost = 0;
+  let totalPrice = 0;
+  let status = 'awaiting_quote';
+  let pricingStatus = 'awaiting_quote';
+
+  if (pricingType === 'per_unit') {
+    quantity = Number(b.quantity);
+
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 100000) {
+      return send(res, 400, {
+        error: `Enter a valid number of ${service.unit_label || 'units'}.`
+      });
     }
+
+    unitPrice = Number(service.unit_price || 0);
+    serviceCost = quantity * unitPrice;
+
+    if (!Number.isSafeInteger(serviceCost) || serviceCost > 100000000) {
+      return send(res, 400, { error: 'The order amount is too high.' });
+    }
+
+    totalPrice = serviceCost + platformFee + workerPayment + transportFee;
+    status = 'awaiting_payment';
+    pricingStatus = 'awaiting_payment';
+
+  } else if (pricingType === 'fixed') {
+    serviceCost = Number(service.base || 0);
+    totalPrice = serviceCost + platformFee + workerPayment + transportFee;
+    status = 'awaiting_payment';
+    pricingStatus = 'awaiting_payment';
+  }
+
+  if (
+    !Number.isSafeInteger(totalPrice) ||
+    totalPrice < 0 ||
+    totalPrice > 100000000
+  ) {
+    return send(res, 400, { error: 'Invalid order total.' });
+  }
+
+  const rows = await table('orders', '', {
+    method: 'POST',
+    body: {
+      customer_id: Number(user.id),
+      worker_id: null,
+      service: String(b.service),
+      description: String(b.description).trim(),
+      pickup: String(b.pickup || ''),
+      delivery: String(b.delivery).trim(),
+      quantity,
+      unit_price_snapshot: unitPrice,
+      service_cost: serviceCost,
+      platform_fee: platformFee,
+      worker_payment:
     if(req.method==='GET' && p==='/api/orders') {
       let rows=await table('orders','select=*&order=id.desc');
       if(user.role==='customer') rows=rows.filter(o=>Number(o.customer_id)===Number(user.id));
