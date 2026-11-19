@@ -172,12 +172,36 @@ async function api(req,res) {
       await table('users',`id=eq.${queryValue(user.id)}`,{method:'PATCH',body:{password_hash:hashPassword(b.newPassword)}});
       return send(res,200,{ok:true,message:'Password changed. Use the new password next time you log in.'});
     }
+if(req.method==='GET' && p==='/api/services') {
+  let rows=await table(
+    'uni_ease_service_prices',
+    'select=id,name,base,pricing_type,unit_label,unit_price,default_platform_fee,default_worker_payment,default_transport_fee,is_active,updated_at&order=name.asc'
+  );
 
-    if(req.method==='GET' && p==='/api/services') {
-      let rows=await table('uni_ease_service_prices','select=name,base,updated_at&order=name.asc');
-      if(!rows.length) rows=DEFAULT_SERVICES.map(([name,base])=>({name,base}));
-      return send(res,200,{services:rows.map(r=>({id:r.name,name:r.name,base:Number(r.base),updated_at:r.updated_at||null}))});
-    }
+  if(!rows.length) {
+    rows=DEFAULT_SERVICES.map(([name,base])=>({
+      name,base,pricing_type:'quote',unit_label:null,unit_price:0,
+      default_platform_fee:0,default_worker_payment:0,
+      default_transport_fee:0,is_active:true
+    }));
+  }
+
+  return send(res,200,{
+    services:rows.filter(r=>r.is_active!==false).map(r=>({
+      id:r.id,
+      name:r.name,
+      base:Number(r.base||0),
+      pricing_type:r.pricing_type||'quote',
+      unit_label:r.unit_label||null,
+      unit_price:Number(r.unit_price||0),
+      platform_fee:Number(r.default_platform_fee||0),
+      worker_payment:Number(r.default_worker_payment||0),
+      transport_fee:Number(r.default_transport_fee||0),
+      updated_at:r.updated_at||null
+    }))
+  });
+}
+    
     const priceMatch=p.match(/^\/api\/services\/(.+)$/);
     if(priceMatch && req.method==='PATCH') {
       if(user.role!=='admin') return send(res,403,{error:'Admins only.'});
