@@ -844,17 +844,41 @@ async function admin(m){
       <div class="card">
         <h2>Orders</h2>
         ${orders.orders.map(o=>`
-          <div class="order">
-            <strong>#${o.id} · ${esc(o.service)}</strong>
-            ${status(o.status)}
-            <p>${esc(o.customer_name)} · ${esc(o.delivery)}</p>
-            <p>${esc(o.description)}</p>
-            <p><strong>${money(o.price)}</strong></p>
-            <button class="btn secondary" onclick="viewChat(${o.id})">
-              View order chat/files
-            </button>
-          </div>
-        `).join('')||'<p>No orders.</p>'}
+  <div class="order">
+    <strong>#${o.id} · ${esc(o.service)}</strong>
+    ${status(o.status)}
+    <p>${esc(o.customer_name)} · ${esc(o.delivery)}</p>
+    <p>${esc(o.description)}</p>
+    <p><strong>${money(o.price)}</strong></p>
+
+    ${o.pricing_status==='awaiting_quote'?`
+      <h3>Prepare customer quotation</h3>
+
+      <form class="quoteForm" data-order-id="${o.id}">
+        <label>Service cost (₦)</label>
+        <input type="number" name="service_cost" min="0" required>
+
+        <label>Uni Ease fee (₦)</label>
+        <input type="number" name="platform_fee" min="0" required>
+
+        <label>Worker payment (₦)</label>
+        <input type="number" name="worker_payment" min="0" required>
+
+        <label>Transport fee (₦)</label>
+        <input type="number" name="transport_fee" min="0" required>
+
+        <label>Additional notes</label>
+        <textarea name="pricing_notes"></textarea>
+
+        <button class="btn">Send quotation</button>
+      </form>
+    `:''}
+
+    <button class="btn secondary" onclick="viewChat(${o.id})">
+      View order chat/files
+    </button>
+  </div>
+`).join('')||'<p>No orders.</p>'}
       </div>
 
       <div class="card">
@@ -956,7 +980,48 @@ m.querySelectorAll('.priceForm').forEach(form=>{
     }
   };
 });
+    m.querySelectorAll('.quoteForm').forEach(form=>{
+  form.onsubmit=async e=>{
+    e.preventDefault();
 
+    const id=form.dataset.orderId;
+    const data=Object.fromEntries(new FormData(form).entries());
+
+    for(const field of [
+      'service_cost',
+      'platform_fee',
+      'worker_payment',
+      'transport_fee'
+    ]){
+      data[field]=Number(data[field]);
+
+      if(!Number.isSafeInteger(data[field])||data[field]<0){
+        toast('Enter valid quotation amounts.');
+        return;
+      }
+    }
+
+    const button=form.querySelector('button');
+    button.disabled=true;
+    button.textContent='Sending...';
+
+    try{
+      await api(`/api/orders/${id}/quote`,{
+        method:'POST',
+        body:JSON.stringify(data)
+      });
+
+      toast('Quotation sent to customer.');
+      await admin(m);
+
+    }catch(err){
+      toast(err.message);
+      button.disabled=false;
+      button.textContent='Send quotation';
+    }
+  };
+});
+m.querySelector('#workerForm').onsubmit=async e=>{
 
 m.querySelector('#workerForm').onsubmit=async e=>{
     e.preventDefault();
