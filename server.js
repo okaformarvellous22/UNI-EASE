@@ -163,6 +163,149 @@ async function api(req,res) {
     }
     const user=await currentUser(req);
     if(!user) return send(res,401,{error:'Please log in.'});
+    // PAYSTACK: INITIALIZE PAYMENT
+if(req.method==='POST' && p==='/api/payments/initialize') {
+  if(user.role!=='customer')
+    return send(res,403,{error:'Customers only.'});
+
+  const b=await readBody(req);
+  const order=await getById('orders',Number(b.orderId));
+
+  if(!order || Number(order.customer_id)!==Number(user.id))
+    return send(res,404,{error:'Order not found.'});
+
+  if(!Number.isSafeInteger(Number(order.price)) || Number(order.price)<1)
+    return send(res,400,{error:'Invalid order amount.'});
+
+  if(!['awaiting_payment'].includes(order.status) ||
+     !['awaiting_payment','approved'].includes(order.pricing_status))
+    return send(res,409,{error:'This order is not ready for payment.'});
+
+  if(order.payment_status==='paid')
+    return send(res,409,{error:'This order has already been paid for.'});
+
+  const secret=process.env.PAYSTACK_SECRET_KEY;
+
+  if(!secret)
+    throw new Error('Paystack secret key is missing from Render.');
+
+  const reference='UE-'+order.id+'-'+Date.now()+'-'+crypto.randomBytes(4).toString('hex');
+
+  const callbackUrl=(process.env.APP_URL || 'https://uni-ease.onrender.com')+'/?payment=callback';
+
+  const response=await fetch('https://api.paystack.co/transaction/initialize',{
+    method:'POST',
+    headers:{
+      Authorization:'Bearer '+secret,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      email:user.email,
+      amount:Number(order.price)*100,
+      currency:'NGN',
+      reference,
+      callback_url:callbackUrl,
+      metadata:{
+        order_id:Number(order.id),
+        customer_id:Number(user.id)
+      }
+    })
+  });
+
+  const result=await response.json().catch(()=>({}));
+
+  if(!response.ok || !result.status || !result.data?.authorization_url)
+    throw new Error(result.message || 'Could not initialize Paystack payment.');
+
+  await table('orders',`id=eq.${queryValue(order.id)}`,{
+    method:'PATCH',
+    body:{
+      payment_status:'pending',
+      paystack_reference:reference,
+      updated_at:new Date().toISOString()
+    }
+  });
+
+  return send(res,200,{
+    authorization_url:result.data.authorization_url,
+    reference
+  });
+}
+
+
+// PAYSTACK: VERIFY PAYMENT
+if(req.method==='POST' && p==='/api/payments/verify') {
+  if(user.role!=='customer')
+    return send(res,403,{error:'Customers only.'});
+
+  const b=await readBody(req);
+  const reference=String(b.reference||'').trim();
+
+  if(!reference)
+    return send(res,400,{error:'Payment reference is required.'});
+
+  const matches=await table(
+    'orders',
+    `paystack_reference=eq.${queryValue(reference)}&select=*&limit=1`
+  );
+
+  const order=matches[0];
+
+  if(!order || Number(order.customer_id)!==Number(user.id))
+    return send(res,404,{error:'Payment record not found.'});
+
+  if(order.payment_status!=='paid') {
+    const secret=process.env.PAYSTACK_SECRET_KEY;
+
+    if(!secret)
+      throw new Error('Paystack secret key is missing from Render.');
+
+    const response=await fetch(
+      'https://api.paystack.co/transaction/verify/'+encodeURIComponent(reference),
+      {
+        headers:{Authorization:'Bearer '+secret}
+      }
+    );
+
+    const result=await response.json().catch(()=>({}));
+    const transaction=result.data;
+
+    if(!response.ok || !result.status ||
+       transaction?.status!=='success' ||
+       transaction?.reference!==reference ||
+       Number(transaction?.amount)!==Number(order.price)*100 ||
+       transaction?.currency!=='NGN') {
+      return send(res,400,{
+        error:'Payment could not be verified. If you were debited, contact Uni Ease support.'
+      });
+    }
+
+    await table('orders',`id=eq.${queryValue(order.id)}`,{
+      method:'PATCH',
+      body:{
+        payment_status:'paid',
+        paid_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      }
+    });
+  }
+
+  if(order.status!=='pending') {
+    await createEvent(
+      order.id,
+      user.id,
+      'pending',
+      'Payment successfully verified through Paystack.'
+    );
+  }
+
+  return send(res,200,{
+    ok:true,
+    payment_status:'paid',
+    orderId:Number(order.id),
+    message:'Payment successful. Your order is now available for assignment.'
+  });
+}
     if(req.method==='GET' && p==='/api/me') return send(res,200,{user:safeUser(user)});
     if(req.method==='POST' && p==='/api/change-password') {
       const b=await readBody(req);
