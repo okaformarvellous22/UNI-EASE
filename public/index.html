@@ -652,10 +652,19 @@ async function customer(m){
  document.getElementById('newOrder').onclick=()=>newOrder(m);
 }
 async function newOrder(m){
+ const s=await api('/api/services');
+
+ if(!s.services.length){
+  toast('No services are currently available.');
+  return;
+ }
+
+ m.innerHTML=`
  <div class="card">
   <h2>Request an errand 💗</h2>
   <p class="muted">Tell us what you need. Your pricing will be calculated or quoted before payment.</p>
   <button class="btn secondary" onclick="dashboard()">Back</button>
+
   <form id="orderForm">
    <label>Choose a service</label>
    <select id="service" required>
@@ -673,16 +682,78 @@ async function newOrder(m){
      </option>
     `).join('')}
    </select>
+
    <div id="quantityBox" class="hidden">
     <label id="quantityLabel">Number of pages</label>
     <input id="quantity" type="number" min="1" step="1" value="1">
    </div>
+
+   <label>What do you need?</label>
    <textarea id="description" rows="4" required placeholder="Describe exactly what you need..."></textarea>
+
+   <label>Pickup location</label>
+   <input id="pickup" type="text" placeholder="Enter pickup address">
+
+   <label>Delivery / destination</label>
+   <input id="delivery" type="text" required placeholder="Enter delivery address">
+
    <div class="order" id="pricePreview"></div>
    <div class="spacer"></div>
    <button class="btn" id="placeOrder">Place order</button>
   </form>
  </div>`;
+
+ const service=document.getElementById('service');
+ const quantityBox=document.getElementById('quantityBox');
+ const quantity=document.getElementById('quantity');
+ const preview=document.getElementById('pricePreview');
+
+ function updatePrice(){
+  const option=service.selectedOptions[0];
+  const type=option.dataset.type;
+  const unit=option.dataset.unit;
+  const rate=Number(option.dataset.rate);
+  const base=Number(option.dataset.base);
+  const platform=Number(option.dataset.platform);
+  const worker=Number(option.dataset.worker);
+  const transport=Number(option.dataset.transport);
+
+  quantityBox.classList.toggle('hidden',type!=='per_unit');
+
+  if(type==='quote'){
+   preview.innerHTML=`
+    <strong>Custom quotation required</strong>
+    <p class="muted">Uni Ease will review your request and send you a price breakdown for approval before payment.</p>`;
+   return;
+  }
+
+  if(type==='per_unit'){
+   document.getElementById('quantityLabel').textContent='Number of '+(unit||'units');
+   const qty=Number(quantity.value);
+
+   if(!Number.isSafeInteger(qty)||qty<1){
+    preview.innerHTML='<p>Please enter a valid quantity.</p>';
+    return;
+   }
+
+   const serviceCost=qty*rate;
+   const total=serviceCost+platform+worker+transport;
+
+   preview.innerHTML=`
+    <strong>Estimated price breakdown</strong>
+    <p>${qty} ${esc(unit||'units')} × ${money(rate)} = ${money(serviceCost)}</p>
+    <p>Uni Ease fee: ${money(platform)}</p>
+    <p>Worker payment: ${money(worker)}</p>
+    <p>Transport: ${money(transport)}</p>
+    <hr>
+    <h3>Total: ${money(total)}</h3>`;
+   return;
+  }
+
+  const total=base+platform+worker+transport;
+
+  preview.innerHTML=`
+   <strong>Estimated price breakdown</strong>
    <p>Service cost: ${money(base)}</p>
    <p>Uni Ease fee: ${money(platform)}</p>
    <p>Worker payment: ${money(worker)}</p>
@@ -691,6 +762,47 @@ async function newOrder(m){
    <h3>Total: ${money(total)}</h3>`;
  }
 
+ service.onchange=updatePrice;
+ quantity.oninput=updatePrice;
+ updatePrice();
+
+ document.getElementById('orderForm').onsubmit=async e=>{
+  e.preventDefault();
+
+  const button=document.getElementById('placeOrder');
+  button.disabled=true;
+  button.textContent='Submitting...';
+
+  try{
+   const payload={
+    service:service.value,
+    description:document.getElementById('description').value.trim(),
+    pickup:document.getElementById('pickup').value.trim(),
+    delivery:document.getElementById('delivery').value.trim()
+   };
+
+   if(service.selectedOptions[0].dataset.type==='per_unit'){
+    payload.quantity=Number(quantity.value);
+   }
+
+   const result=await api('/api/orders',{
+    method:'POST',
+    body:JSON.stringify(payload)
+   });
+
+   toast(result.pricingStatus==='awaiting_quote'
+    ?'Request submitted. Awaiting your quotation.'
+    :'Order created. Payment will be available after pricing is confirmed.');
+
+   await dashboard();
+
+  }catch(err){
+   toast(err.message);
+   button.disabled=false;
+   button.textContent='Place order';
+  }
+ };
+}
 async function viewOrder(id){
  const d=await api('/api/orders/'+id);const o=d.order;
  document.getElementById('main').innerHTML=`<div class="card">
