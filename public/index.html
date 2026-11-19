@@ -801,11 +801,41 @@ async function admin(m){
       <p class="muted">Changes apply to new orders only.</p>
       <div class="grid2">
         ${services.services.map(s=>`
-          <form class="order priceForm" data-service-id="${esc(s.id)}">
-            <label>${esc(s.name)}</label>
-            <input type="number" name="base" min="0" max="100000000" value="${s.base}" required>
-            <button class="btn">Save price</button>
-          </form>
+         <form class="order priceForm" data-service-name="${esc(s.name)}">
+  <h3>${esc(s.name)}</h3>
+
+  <label>Pricing type</label>
+  <select name="pricing_type">
+    <option value="quote" ${s.pricing_type==='quote'?'selected':''}>Custom quotation</option>
+    <option value="per_unit" ${s.pricing_type==='per_unit'?'selected':''}>Per unit</option>
+    <option value="fixed" ${s.pricing_type==='fixed'?'selected':''}>Fixed price</option>
+  </select>
+
+  <label>Base service cost (₦)</label>
+  <input type="number" name="base" min="0" value="${s.base||0}">
+
+  <label>Unit name (e.g. page)</label>
+  <input type="text" name="unit_label" value="${esc(s.unit_label||'')}">
+
+  <label>Price per unit (₦)</label>
+  <input type="number" name="unit_price" min="0" value="${s.unit_price||0}">
+
+  <label>Uni Ease platform fee (₦)</label>
+  <input type="number" name="default_platform_fee" min="0" value="${s.platform_fee||0}">
+
+  <label>Worker payment (₦)</label>
+  <input type="number" name="default_worker_payment" min="0" value="${s.worker_payment||0}">
+
+  <label>Transport fee (₦)</label>
+  <input type="number" name="default_transport_fee" min="0" value="${s.transport_fee||0}">
+
+  <label>
+    <input type="checkbox" name="is_active" ${s.is_active!==false?'checked':''}>
+    Service is active
+  </label>
+
+  <button class="btn">Save pricing</button>
+</form> 
         `).join('')}
       </div>
     </div>
@@ -879,36 +909,54 @@ async function admin(m){
       </div>
     </div>
   `;
+m.querySelectorAll('.priceForm').forEach(form=>{
+  form.onsubmit=async e=>{
+    e.preventDefault();
 
-  m.querySelectorAll('.priceForm').forEach(form=>{
-    form.onsubmit=async e=>{
-      e.preventDefault();
+    const name=form.dataset.serviceName;
+    const data=Object.fromEntries(new FormData(form).entries());
 
-      const id=form.dataset.serviceId;
-      const base=Number(new FormData(form).get('base'));
+    const numericFields=[
+      'base',
+      'unit_price',
+      'default_platform_fee',
+      'default_worker_payment',
+      'default_transport_fee'
+    ];
 
-      if(!Number.isSafeInteger(base)||base<0){
-        toast('Enter a valid price');
+    for(const field of numericFields){
+      data[field]=Number(data[field]||0);
+
+      if(!Number.isSafeInteger(data[field])||data[field]<0){
+        toast('Enter a valid amount for '+field);
         return;
       }
+    }
 
-      const button=form.querySelector('button');
-      button.disabled=true;
+    data.unit_label=data.unit_label.trim()||null;
+    data.is_active=form.querySelector('[name="is_active"]').checked;
 
-      try{
-        await api('/api/services/'+encodeURIComponent(id),{
-          method:'PATCH',
-          body:JSON.stringify({base})
-        });
+    const button=form.querySelector('button');
+    button.disabled=true;
+    button.textContent='Saving...';
 
-        toast('Service price saved');
-        await admin(m);
-      }catch(err){
-        toast(err.message);
-        button.disabled=false;
-      }
-    };
-  });
+    try{
+      await api('/api/services/'+encodeURIComponent(name),{
+        method:'PATCH',
+        body:JSON.stringify(data)
+      });
+
+      toast('Service pricing updated successfully.');
+      await admin(m);
+
+    }catch(err){
+      toast(err.message);
+      button.disabled=false;
+      button.textContent='Save pricing';
+    }
+  };
+});
+
 
 m.querySelector('#workerForm').onsubmit=async e=>{
     e.preventDefault();
