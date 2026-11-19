@@ -669,7 +669,7 @@ return send(res, 201, {
   const id=Number(orderMatch[1]);
 
   const rows=await table('orders',
-    `id=eq.${queryValue(id)}&worker_id=is.null&status=eq.pending`,
+    `id=eq.${queryValue(id)}&worker_id=is.null&status=eq.pending&payment_status=eq.paid`,
     {
       method:'PATCH',
       body:{
@@ -762,7 +762,11 @@ return send(res, 201, {
     if(req.method==='POST' && p==='/api/orders/assign') {
       if(user.role!=='admin') return send(res,403,{error:'Admins only.'});
       const b=await readBody(req); const o=await getById('orders',Number(b.orderId)); const w=await getById('users',Number(b.workerId));
-      if(!o||!w||w.role!=='worker'||w.active===false) return send(res,404,{error:'Order or worker not found.'});
+      if(!o||!w||w.role!=='worker'||w.active===false)
+  return send(res,404,{error:'Order or worker not found.'});
+
+if(o.payment_status!=='paid')
+  return send(res,400,{error:'This order must be paid before assignment.'});
       await table('orders',`id=eq.${queryValue(o.id)}`,{method:'PATCH',body:{worker_id:Number(w.id)}});
       await createEvent(o.id,user.id,'assigned',`Assigned to ${w.name}`); return send(res,200,{ok:true});
     }
