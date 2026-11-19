@@ -633,38 +633,44 @@ async function customer(m){
  document.getElementById('newOrder').onclick=()=>newOrder(m);
 }
 async function newOrder(m){
- const s=await api('/api/services');
- m.innerHTML=`<div class="card"><h2>Request an errand</h2>
- <button class="btn secondary" onclick="dashboard()">Back</button>
- <form id="orderForm">
- <label>Service</label><select id="service">${s.services.map(x=>`<option value="${esc(x.name)}" data-base="${x.base}">${esc(x.name)} — from ${money(x.base)}</option>`).join('')}</select>
- <label>What do you need?</label><textarea id="description" rows="4" required></textarea>
- <label for="pickup">Pickup location</label>
- <input id="pickup" name="pickup" type="text" placeholder="Enter pickup address" required>
- <label for="delivery">Delivery / destination</label>
- <input id="delivery" name="delivery" type="text" placeholder="Enter delivery address" required>
- <label>Service price (₦)</label><input id="price" type="number" min="0" value="${s.services[0]?.base??1500}" readonly required>
- <p class="muted">Price is set by Uni Ease. You will see the current service price here.</p>
- <div class="spacer"></div><button class="btn">Place order</button>
- </form></div>`;
-
- document.getElementById('service').onchange=e=>{
-  document.getElementById('price').value=e.target.selectedOptions[0].dataset.base;
- };
- document.getElementById('orderForm').onsubmit=async e=>{
-  e.preventDefault();
-  try{
-   await api('/api/orders',{method:'POST',body:JSON.stringify({
-    service:document.getElementById('service').value,
-    description:document.getElementById('description').value,
-    pickup:document.getElementById('pickup').value,
-    delivery:document.getElementById('delivery').value,
-    price:Number(document.getElementById('price').value)
-   })});
-   toast('Order placed successfully');await dashboard();
-  }catch(x){toast(x.message)}
- };
-}
+ <div class="card">
+  <h2>Request an errand 💗</h2>
+  <p class="muted">Tell us what you need. Your pricing will be calculated or quoted before payment.</p>
+  <button class="btn secondary" onclick="dashboard()">Back</button>
+  <form id="orderForm">
+   <label>Choose a service</label>
+   <select id="service" required>
+    ${s.services.map(x=>`
+     <option
+      value="${esc(x.name)}"
+      data-type="${esc(x.pricing_type)}"
+      data-unit="${esc(x.unit_label||'')}"
+      data-rate="${Number(x.unit_price||0)}"
+      data-base="${Number(x.base||0)}"
+      data-platform="${Number(x.platform_fee||0)}"
+      data-worker="${Number(x.worker_payment||0)}"
+      data-transport="${Number(x.transport_fee||0)}">
+      ${esc(x.name)}
+     </option>
+    `).join('')}
+   </select>
+   <div id="quantityBox" class="hidden">
+    <label id="quantityLabel">Number of pages</label>
+    <input id="quantity" type="number" min="1" step="1" value="1">
+   </div>
+   <textarea id="description" rows="4" required placeholder="Describe exactly what you need..."></textarea>
+   <div class="order" id="pricePreview"></div>
+   <div class="spacer"></div>
+   <button class="btn" id="placeOrder">Place order</button>
+  </form>
+ </div>`;
+   <p>Service cost: ${money(base)}</p>
+   <p>Uni Ease fee: ${money(platform)}</p>
+   <p>Worker payment: ${money(worker)}</p>
+   <p>Transport: ${money(transport)}</p>
+   <hr>
+   <h3>Total: ${money(total)}</h3>`;
+ }
 
 async function viewOrder(id){
  const d=await api('/api/orders/'+id);const o=d.order;
