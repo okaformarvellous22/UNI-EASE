@@ -346,10 +346,41 @@ function esc(s){
 function status(s){return `<span class="badge">${esc(s.replace('_',' '))}</span>`}
 
 async function boot(){
- if(state.token){
-  try{state.user=(await api('/api/me')).user;await render()}
-  catch{localStorage.removeItem('ca_token');state.token=null;renderLanding()}
- }else renderLanding();
+  if(state.token){
+    try{
+      state.user=(await api('/api/me')).user;
+
+      const params=new URLSearchParams(window.location.search);
+
+      if(params.get('payment')==='callback'){
+        const reference=params.get('reference');
+
+        history.replaceState({},'',window.location.pathname);
+
+        if(reference){
+          try{
+            const result=await api('/api/payments/verify',{
+              method:'POST',
+              body:JSON.stringify({reference})
+            });
+
+            toast(result.message||'Payment successful!');
+          }catch(err){
+            toast(err.message);
+          }
+        }
+      }
+
+      await render();
+
+    }catch{
+      localStorage.removeItem('ca_token');
+      state.token=null;
+      renderLanding();
+    }
+  }else{
+    renderLanding();
+  }
 }
 function renderLanding(){
  app.innerHTML=`
