@@ -369,7 +369,113 @@ if (req.method === 'POST' && p === '/api/orders') {
       rows=rows.map(o=>({...o,customer_name:people.get(Number(o.customer_id))?.name||'',customer_phone:people.get(Number(o.customer_id))?.phone||'',worker_name:people.get(Number(o.worker_id))?.name||''}));
       return send(res,200,{orders:rows});
     }
-    const orderMatch=p.match(/^\/api\/orders\/(\d+)(?:\/(accept|status|messages))?$/);
+    const orderMatch=p.match(/^\/api\/orders\/(\d+)(?:\/(accept|status|messages|quote|approve-quote))?$/);
+  if (orderMatch && req.method === 'POST' && orderMatch[2] === 'quote') {
+  if (user.role !== 'admin') {
+    return send(res, 403, { error: 'Admins only.' });
+  }
+
+  const id = Number(orderMatch[1]);
+  const order = await getById('orders', id);
+
+  if (!order) {
+    return send(res, 404, { error: 'Order not found.' });
+  }
+
+  if (order.pricing_status !== 'awaiting_quote') {
+    return send(res, 409, { error: 'This order is not awaiting a quotation.' });
+  }
+
+  const b = await readBody(req);
+
+  const fields = [
+    'service_cost',
+    'platform_fee',
+    'worker_payment',
+    'transport_fee'
+  ];
+
+  const amounts = {};
+
+  for (const field of fields) {
+    const value = Number(b[field]);
+
+    if (!Number.isSafeInteger(value) || value < 0) {
+      return send(res, 400, { error: `Invalid ${field}.` });
+    }
+
+    amounts[field] = value;
+  }
+
+  const total = Object.values(amounts).reduce((sum, value) => sum + value, 0);
+
+  if (!Number.isSafeInteger(total) || total < 1 || total > 100000000) {
+    return send(res, 400, { error: 'Invalid quotation total.' });
+  }
+
+  const rows = await table(
+    'orders',
+    `id=eq.${queryValue(id)}`,
+    {
+      method: 'PATCH',
+      body: {
+        ...amounts,
+        price: total,
+        pricing_status: 'quoted',
+        pricing_notes: String(b.pricing_notes || '').slice(0, 1000),
+        updated_at: new Date().toISOString()
+      }
+    }
+  );
+
+  if (!rows.length) {
+    return send(res, 404, { error: 'Could not save quotation.' });
+  }
+
+  await createEvent(id, user.id, 'quoted', 'Admin sent a quotation for customer approval.');
+
+  return send(res, 200, {
+    ok: true,
+    total,
+    breakdown: amounts
+  });
+}
+  if (orderMatch && req.method === 'POST' && orderMatch[2] === 'approve-quote') {
+  if (user.role !== 'customer') {
+    return send(res, 403, { error: 'Customers only.' });
+  }
+
+  const id = Number(orderMatch[1]);
+  const order = await getById('orders', id);
+
+  if (!order || Number(order.customer_id) !== Number(user.id)) {
+    return send(res, 404, { error: 'Order not found.' });
+  }
+
+  if (order.pricing_status !== 'quoted') {
+    return send(res, 409, { error: 'No quotation is awaiting approval.' });
+  }
+
+  await table(
+    'orders',
+    `id=eq.${queryValue(id)}`,
+    {
+      method: 'PATCH',
+      body: {
+        pricing_status: 'approved',
+        updated_at: new Date().toISOString()
+      }
+    }
+  );
+
+  await createEvent(id, user.id, 'awaiting_payment', 'Customer approved the quotation.');
+
+  return send(res, 200, {
+    ok: true,
+    price: Number(order.price),
+    message: 'Quotation approved. Awaiting payment.'
+  });
+}
     if(orderMatch && req.method==='GET' && !orderMatch[2]) {
       const id=Number(orderMatch[1]); const access=await getOrderForUser(id,user);
       if(!access.order) return send(res,access.status,{error:access.error});
