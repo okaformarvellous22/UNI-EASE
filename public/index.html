@@ -601,17 +601,35 @@ async function customer(m){
    </div>
 
    <div class="card">
-     ${d.orders.length ? d.orders.map(o=>`
-       <div class="order">
-         <strong>#${o.id} · ${esc(o.service)}</strong>
-         ${status(o.status)}
-         <p>${esc(o.description)}</p>
-         <p>${esc(o.delivery)} · <strong>${money(o.price)}</strong></p>
-         <button class="btn secondary" onclick="viewOrder(${o.id})">Track order</button>
-         <button class="btn secondary" onclick="viewChat(${o.id})">Order chat</button>
-         ${o.status==='completed'?`<button class="btn secondary" onclick="rateOrder(${o.id})">Rate</button>`:''}
-       </div>
-     `).join(''):'<p class="muted">You have no orders yet. Your next errand starts here!</p>'}
+   ${d.orders.length ? d.orders.map(o=>`
+ <div class="order">
+  <strong>#${o.id} · ${esc(o.service)}</strong>
+  ${status(o.status)}
+  <p>${esc(o.description)}</p>
+  <p>${esc(o.delivery)}</p>
+
+  ${o.pricing_status==='quoted'?`
+   <h3>Quotation received</h3>
+   <p>Service cost: ${money(o.service_cost)}</p>
+   <p>Uni Ease fee: ${money(o.platform_fee)}</p>
+   <p>Worker payment: ${money(o.worker_payment)}</p>
+   <p>Transport: ${money(o.transport_fee)}</p>
+   <h3>Total: ${money(o.price)}</h3>
+   <button class="btn" onclick="approveQuote(${o.id})">
+    Approve quotation
+   </button>
+  `:`
+   <p><strong>${money(o.price)}</strong></p>
+  `}
+
+  <button class="btn secondary" onclick="viewOrder(${o.id})">Track order</button>
+  <button class="btn secondary" onclick="viewChat(${o.id})">Order chat</button>
+
+  ${o.status==='completed'?`
+   <button class="btn secondary" onclick="rateOrder(${o.id})">Rate</button>
+  `:''}
+ </div>
+`).join(''):'<p class="muted">You have no orders yet. Your next errand starts here!</p>'} 
    </div>
 
    <div class="card" style="margin-top:20px">
@@ -684,7 +702,22 @@ async function viewOrder(id){
  <button class="btn" onclick="complaint(${o.id})">Report a problem</button>
  <button class="btn secondary" onclick="dashboard()">Back</button></div>`;
 }
+async function approveQuote(id){
+ if(!confirm('Do you want to approve this quotation?')) return;
 
+ try{
+  const result=await api(`/api/orders/${id}/approve-quote`,{
+   method:'POST',
+   body:JSON.stringify({})
+  });
+
+  toast(result.message||'Quotation approved.');
+  await dashboard();
+
+ }catch(err){
+  toast(err.message);
+ }
+}
 async function complaint(id){
  const message=prompt('Tell Uni Ease what went wrong:');
  if(!message)return;
