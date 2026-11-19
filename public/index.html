@@ -608,7 +608,16 @@ async function customer(m){
   ${status(o.status)}
   <p>${esc(o.description)}</p>
   <p>${esc(o.delivery)}</p>
-
+${o.payment_status==='paid'?`
+  <p class="badge">✓ Payment confirmed</p>
+`:`
+  ${o.status==='awaiting_payment'?`
+    <p class="badge">Payment pending</p>
+    <button class="btn" onclick="payOrder(${o.id})">
+      Pay Now · ${money(o.price)}
+    </button>
+  `:''}
+`}
   ${o.pricing_status==='quoted'?`
    <h3>Quotation received</h3>
    <p>Service cost: ${money(o.service_cost)}</p>
@@ -814,6 +823,25 @@ async function viewOrder(id){
  <button class="btn" onclick="viewChat(${o.id})">Open order chat</button>
  <button class="btn" onclick="complaint(${o.id})">Report a problem</button>
  <button class="btn secondary" onclick="dashboard()">Back</button></div>`;
+}
+
+    async function payOrder(id){
+  if(!confirm('Proceed to Paystack to pay for this order?')) return;
+
+  try{
+    const result=await api('/api/payments/initialize',{
+      method:'POST',
+      body:JSON.stringify({orderId:id})
+    });
+
+    if(!result.authorization_url)
+      throw new Error('Paystack payment link was not returned.');
+
+    window.location.href=result.authorization_url;
+
+  }catch(err){
+    toast(err.message);
+  }
 }
 async function approveQuote(id){
  if(!confirm('Do you want to approve this quotation?')) return;
