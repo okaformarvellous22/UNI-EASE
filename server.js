@@ -346,19 +346,57 @@ if (req.method === 'POST' && p === '/api/orders') {
   }
 
   const rows = await table('orders', '', {
-    method: 'POST',
-    body: {
-      customer_id: Number(user.id),
-      worker_id: null,
-      service: String(b.service),
-      description: String(b.description).trim(),
-      pickup: String(b.pickup || ''),
-      delivery: String(b.delivery).trim(),
-      quantity,
-      unit_price_snapshot: unitPrice,
-      service_cost: serviceCost,
-      platform_fee: platformFee,
-      worker_payment:
+  method: 'POST',
+  body: {
+    customer_id: Number(user.id),
+    worker_id: null,
+    service: String(b.service),
+    description: String(b.description).trim(),
+    pickup: String(b.pickup || ''),
+    delivery: String(b.delivery).trim(),
+    quantity,
+    unit_price_snapshot: unitPrice,
+    service_cost: serviceCost,
+    platform_fee: platformFee,
+    worker_payment: workerPayment,
+    transport_fee: transportFee,
+    pricing_status: pricingStatus,
+    pricing_notes: null,
+    price: totalPrice,
+    status
+  }
+});
+
+const order = rows[0];
+
+if (!order) {
+  throw new Error('Order was not returned after creation.');
+}
+
+await createEvent(
+  order.id,
+  user.id,
+  status,
+  pricingType === 'quote'
+    ? 'Order submitted for quotation'
+    : 'Order created; awaiting payment'
+);
+
+return send(res, 201, {
+  orderId: Number(order.id),
+  pricingStatus,
+  price: totalPrice,
+  breakdown: pricingType === 'quote'
+    ? null
+    : {
+        serviceCost,
+        platformFee,
+        workerPayment,
+        transportFee,
+        total: totalPrice
+      }
+});
+}
     if(req.method==='GET' && p==='/api/orders') {
       let rows=await table('orders','select=*&order=id.desc');
       if(user.role==='customer') rows=rows.filter(o=>Number(o.customer_id)===Number(user.id));
