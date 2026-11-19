@@ -629,10 +629,10 @@ return send(res, 201, {
   const id = Number(orderMatch[1]);
   const order = await getById('orders', id);
 
-  if (!order || Number(order.customer_id) !== Number(user.id)) {
+    if (!order || Number(order.customer_id) !== Number(user.id)) {
     return send(res, 404, { error: 'Order not found.' });
   }
-`}
+
   if (order.pricing_status !== 'quoted') {
     return send(res, 409, { error: 'No quotation is awaiting approval.' });
   }
