@@ -632,15 +632,6 @@ return send(res, 201, {
   if (!order || Number(order.customer_id) !== Number(user.id)) {
     return send(res, 404, { error: 'Order not found.' });
   }
-${o.payment_status==='paid'?`
-  <p class="badge">✓ Payment confirmed</p>
-`:`
-  ${o.status==='awaiting_payment'?`
-    <p class="badge">Payment pending</p>
-    <button class="btn" onclick="payOrder(${o.id})">
-      Pay Now · ${money(o.price)}
-    </button>
-  `:''}
 `}
   if (order.pricing_status !== 'quoted') {
     return send(res, 409, { error: 'No quotation is awaiting approval.' });
