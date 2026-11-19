@@ -201,16 +201,79 @@ if(req.method==='GET' && p==='/api/services') {
     }))
   });
 }
-    
-    const priceMatch=p.match(/^\/api\/services\/(.+)$/);
-    if(priceMatch && req.method==='PATCH') {
-      if(user.role!=='admin') return send(res,403,{error:'Admins only.'});
-      const name=decodeURIComponent(priceMatch[1]); const b=await readBody(req); const base=Number(b.base);
-      if(!Number.isSafeInteger(base)||base<0||base>100000000) return send(res,400,{error:'Enter a valid non-negative price.'});
-      const rows=await table('uni_ease_service_prices',`name=eq.${queryValue(name)}`,{method:'PATCH',body:{base,updated_at:new Date().toISOString()}});
-      if(!rows.length) return send(res,404,{error:'Service price not found.'});
-      return send(res,200,{service:rows[0]});
+    const priceMatch = p.match(/^\/api\/services\/(.+)$/);
+
+if (priceMatch && req.method === 'PATCH') {
+  if (user.role !== 'admin') {
+    return send(res, 403, { error: 'Admins only.' });
+  }
+
+  const name = decodeURIComponent(priceMatch[1]);
+  const b = await readBody(req);
+  const updates = {};
+
+  const numericFields = {
+    base: 'base',
+    unit_price: 'unit_price',
+    default_platform_fee: 'default_platform_fee',
+    default_worker_payment: 'default_worker_payment',
+    default_transport_fee: 'default_transport_fee'
+  };
+
+  for (const [input, column] of Object.entries(numericFields)) {
+    if (Object.prototype.hasOwnProperty.call(b, input)) {
+      const value = Number(b[input]);
+
+      if (!Number.isSafeInteger(value) || value < 0 || value > 100000000) {
+        return send(res, 400, {
+          error: `Enter a valid non-negative amount for ${input}.`
+        });
+      }
+
+      updates[column] = value;
     }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(b, 'pricing_type')) {
+    if (!['quote', 'per_unit', 'fixed'].includes(b.pricing_type)) {
+      return send(res, 400, { error: 'Invalid pricing type.' });
+    }
+    updates.pricing_type = b.pricing_type;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(b, 'unit_label')) {
+    if (b.unit_label !== null && typeof b.unit_label !== 'string') {
+      return send(res, 400, { error: 'Invalid unit label.' });
+    }
+    updates.unit_label = b.unit_label;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(b, 'is_active')) {
+    if (typeof b.is_active !== 'boolean') {
+      return send(res, 400, { error: 'Invalid service status.' });
+    }
+    updates.is_active = b.is_active;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return send(res, 400, { error: 'No valid pricing changes supplied.' });
+  }
+
+  updates.updated_at = new Date().toISOString();
+
+  const rows = await table(
+    'uni_ease_service_prices',
+    `name=eq.${queryValue(name)}`,
+    { method: 'PATCH', body: updates }
+  );
+
+  if (!rows.length) {
+    return send(res, 404, { error: 'Service price not found.' });
+  }
+
+  return send(res, 200, { service: rows[0] });
+}
+    
 
     if(req.method==='POST' && p==='/api/orders') {
       if(user.role!=='customer') return send(res,403,{error:'Only customers can create orders.'});
