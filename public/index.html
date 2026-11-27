@@ -641,6 +641,21 @@ async function customer(m){
   <p>${esc(o.delivery)}</p>
 ${o.payment_status==='paid'?`
   <p class="badge">✓ Payment confirmed</p>
+
+  <div class="order" style="background:#FFF0F7;border-color:#F3CFE0">
+    <h3>💗 Need extra assistance?</h3>
+    <p class="muted">
+      Need additional purchases, have special instructions,
+      or require help coordinating something for this order?
+      Speak directly with Uni Ease Concierge.
+    </p>
+    <a class="btn"
+       href="https://wa.me/2348106731231?text=${encodeURIComponent('Hello Uni Ease Concierge, I need assistance with Order #'+o.id+' ('+o.service+').')}"
+       target="_blank"
+       rel="noopener noreferrer">
+       Speak to an Agent
+    </a>
+  </div>
 `:`
   ${o.status==='awaiting_payment'?`
     <p class="badge">Payment pending</p>
